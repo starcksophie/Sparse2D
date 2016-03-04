@@ -88,8 +88,9 @@ target_link_libraries(mw_deconv sparse2d)
 #
 # Install (by default in the project directory)
 #
-
-set(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR})
+if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    set (CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR} CACHE PATH "default install path" FORCE )
+endif()
 
 #install sparse2d headers
 FILE(GLOB inc_lib  "${PROJECT_SOURCE_DIR}/src/libsparse2d/*.h")
