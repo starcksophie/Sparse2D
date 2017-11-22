@@ -23,6 +23,7 @@
 #include "IM_Obj.h"
 #include "MR1D1D.h"
 
+// #define DB_MR1D1D
 
 /****************************************************************************/
 
@@ -285,7 +286,7 @@ inline float & MR1D1D::operator() (int sx, int s1, int i, int j) const
  	(sx < 0) || (sx >= nbr_band_x()) ||
 	(s1 < 0) || (s1 >= nbr_band_y()))
    {
-      printf("Error: (sx,s1,i,j)=(%d,%d, %d,%d), size band = (%d,%d) , scale=(%d,%d) \n", sx,s1,i,j,size_band_nx(sx,s1), size_band_ny(sx,s1), (sx,s1), nbr_band_x(), nbr_band_y());
+      printf("Error: (sx,s1,i,j)=(%d,%d, %d,%d), size band = (%d,%d) , scale=(%d,%d) \n", sx,s1,i,j,size_band_nx(sx,s1), size_band_ny(sx,s1), nbr_band_x(), nbr_band_y());
       exit(-1);
    }
 #endif
@@ -405,7 +406,9 @@ void MR1D1D::transform_to_vectarray(fltarray &Data, fltarray &TabVect)
 {
    int Nsx = nbr_coef_x();
    int Nsy = nbr_coef_y();
-   cout << "ALLOC " << Nsx << " " << Nsy << endl;
+#ifdef DB_MR1D1D
+   cout << "ALLOC transform_to_vectarray " << Nsx << " " << Nsy << endl;
+#endif
    TabVect.alloc(nbr_coef_x(), nbr_coef_y());
    int x,b,y,i;
    Nx = Data.nx();
@@ -421,10 +424,14 @@ void MR1D1D::transform_to_vectarray(fltarray &Data, fltarray &TabVect)
         for (i=0; i < Nx; i++) Frame(i) = Data(i,y);
         WT_x.transform(Frame);
         for (b=0; b < NbrBandX; b++)
-        for (i=0; i < WT_x.size_scale_np (b); i++)  TabVect(Pix++,y) = WT_x(b,i);
-	   if (y == 0) TabPosBand(b) = Pix;
+        {
+           for (i=0; i < WT_x.size_scale_np (b); i++)  TabVect(Pix++,y) = WT_x(b,i);
+	       if (y == 0) TabPosBand(b) = Pix;  
+        }
     }
+#ifdef DB_MR1D1D
  cout << "1D_Y " << NbrBandY << endl;
+#endif
    // 1D wt 
    if (NbrBandY >= 2)
    {
@@ -438,7 +445,9 @@ void MR1D1D::transform_to_vectarray(fltarray &Data, fltarray &TabVect)
            for (int p=0; p < WT_y.size_scale_np (b1); p++)  TabVect(TabPosBand(b)+i* WT_x.size_scale_np(b)+i,y) = WT_y(b1,p);
         } 	
    }    
+#ifdef DB_MR1D1D
  cout << "END TRANS " << endl;
+#endif
 }
 
 /****************************************************************************/

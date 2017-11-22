@@ -1,0 +1,16 @@
+/Users/sfarrens/Dropbox/CEA/P-ISAP/isap/cxx/sparse2d_opt_w_unit/build2/CMakeFiles/example.dir
+/Users/sfarrens/Dropbox/CEA/P-ISAP/isap/cxx/sparse2d_opt_w_unit/build2/CMakeFiles/mr_transform_test.dir
+/Users/sfarrens/Dropbox/CEA/P-ISAP/isap/cxx/sparse2d_opt_w_unit/build2/CMakeFiles/cur_trans.dir
+/Users/sfarrens/Dropbox/CEA/P-ISAP/isap/cxx/sparse2d_opt_w_unit/build2/CMakeFiles/cur_stat.dir
+/Users/sfarrens/Dropbox/CEA/P-ISAP/isap/cxx/sparse2d_opt_w_unit/build2/CMakeFiles/cur_filter.dir
+/Users/sfarrens/Dropbox/CEA/P-ISAP/isap/cxx/sparse2d_opt_w_unit/build2/CMakeFiles/cur_deconv.dir
+/Users/sfarrens/Dropbox/CEA/P-ISAP/isap/cxx/sparse2d_opt_w_unit/build2/CMakeFiles/mr_filter.dir
+/Users/sfarrens/Dropbox/CEA/P-ISAP/isap/cxx/sparse2d_opt_w_unit/build2/CMakeFiles/mr_recons.dir
+/Users/sfarrens/Dropbox/CEA/P-ISAP/isap/cxx/sparse2d_opt_w_unit/build2/CMakeFiles/mr_deconv.dir
+/Users/sfarrens/Dropbox/CEA/P-ISAP/isap/cxx/sparse2d_opt_w_unit/build2/CMakeFiles/mr_transform.dir
+/Users/sfarrens/Dropbox/CEA/P-ISAP/isap/cxx/sparse2d_opt_w_unit/build2/CMakeFiles/mr_info.dir
+/Users/sfarrens/Dropbox/CEA/P-ISAP/isap/cxx/sparse2d_opt_w_unit/build2/CMakeFiles/mga2d.dir
+/Users/sfarrens/Dropbox/CEA/P-ISAP/isap/cxx/sparse2d_opt_w_unit/build2/CMakeFiles/sparse2d.dir
+/Users/sfarrens/Dropbox/CEA/P-ISAP/isap/cxx/sparse2d_opt_w_unit/build2/CMakeFiles/tools.dir
+/Users/sfarrens/Dropbox/CEA/P-ISAP/isap/cxx/sparse2d_opt_w_unit/build2/CMakeFiles/cur_contrast.dir
+/Users/sfarrens/Dropbox/CEA/P-ISAP/isap/cxx/sparse2d_opt_w_unit/build2/CMakeFiles/sparse1d.dir

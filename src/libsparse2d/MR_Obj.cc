@@ -1020,26 +1020,27 @@ void MultiResol::alloc (int Nbr_Line, int Nbr_Col, int Nbr_Scale,
                         type_transform Transform, FilterAnaSynt *FAS, 
                         sb_type_norm Norm, int NbrUndec, type_undec_filter Undec_Filter)
 {
-   // cout << "IN " <<  NbrUndec << endl;
+  //cout << "IN " <<  NbrUndec << endl;
    char *Name = strdup("multi trans");
+   free();
    FilterBank = FAS;
    if (FAS != NULL) SBFilter = FAS->type_filter();
    NbrUndecimatedScale = NbrUndec;
    TypeNorm = Norm;
    U_Filter = Undec_Filter;
-   alloc (Nbr_Line, Nbr_Col, Nbr_Scale, Transform, Name);
+   alloc (Nbr_Line, Nbr_Col, Nbr_Scale, Transform, Name, False);
 }
 
 /****************************************************************************/
 
 void MultiResol::alloc (int Nbr_Line, int Nbr_Col, int Nbr_Scale,
-                        type_transform Transform, char *Name)
+                        type_transform Transform, char *Name, Bool FreeMem)
 {
     int s, Nl_s=Nbr_Line, Nc_s=Nbr_Col;
     char ch[80];
-
+    if (FreeMem == True) free();
 // cout << "ALLOC " << endl;
-
+    
     Type_Transform = Transform;
   
     Set_Transform = SetTransform (Transform);
@@ -1067,6 +1068,7 @@ void MultiResol::alloc (int Nbr_Line, int Nbr_Col, int Nbr_Scale,
               FilterBank_Line->alloc(F_5_3);
 	      FilterBank_Column = new FilterAnaSynt;
               FilterBank_Column->alloc(F_4_4);
+	      FilterBankAlloc=True;
 	   }
 	   // cout << "  ok TO_DIV_1" << endl;
            break;	
@@ -1079,12 +1081,15 @@ void MultiResol::alloc (int Nbr_Line, int Nbr_Col, int Nbr_Scale,
               FilterBank_Line->alloc(F_4_4);
 	      FilterBank_Column = new FilterAnaSynt;
               FilterBank_Column->alloc(F_5_3);
+	      FilterBankAlloc=True;
 	   }
 	   // cout << "  ok TO_DIV_2" << endl;
            break;	
       case TO_MALLAT:
       case TO_UNDECIMATED_MALLAT:
+
       case TO_LC:
+
           if (FilterBank == NULL)
           {
 	    TypeNorm = DEF_SB_NORM;
@@ -1092,7 +1097,9 @@ void MultiResol::alloc (int Nbr_Line, int Nbr_Col, int Nbr_Scale,
            // cout << "FB1 " << SBFilter << endl;
            // cout << StringSBFilter(SBFilter) << endl;
            FilterBank = new FilterAnaSynt;
+	   	
            FilterBank->alloc(SBFilter);
+	   
 	   FilterBank_Line = FilterBank;
 	   FilterBank_Column = FilterBank;
            // cout << "FB2 " << endl;
@@ -1102,6 +1109,7 @@ void MultiResol::alloc (int Nbr_Line, int Nbr_Col, int Nbr_Scale,
          {
            FilterBank_Line = FilterBank;
 	   FilterBank_Column = FilterBank;
+	  
           }
 #if DEBUG_OBJ
           cout << "ALLOC 1 " << endl;
@@ -1130,11 +1138,11 @@ void MultiResol::alloc (int Nbr_Line, int Nbr_Col, int Nbr_Scale,
              cout << "Error: filter bank is not defined ... " << endl;
              exit(-1);
            }
-           SubBandFilter *SBF = new SubBandFilter(*FAS, NORM_L2);
-	   SBF->Border = I_PERIOD;
+           SBF_LC = new SubBandFilter(*FAS, NORM_L2);
+           SBF_LC->setBorder(I_PERIOD);
 	   // cout <<  " Nbr_Plan = "  << " " <<    LC_NbrScaleCol << endl;
            LC = new  LineCol;
-	   (LC->alloc)(*SBF, False);
+	   (LC->alloc)(*SBF_LC, False);
 	   //  cout <<  ":ALLOC OK "  << " " <<    NbrBand_per_Resol << endl;
 	   if (Verbose == True) cout << "NbrScale in Y = " << LC_NbrScaleCol << ", NbrScale in X = "  << LC_NbrScaleLine << endl; 
           }  
@@ -1271,7 +1279,7 @@ void MultiResol::alloc (int Nbr_Line, int Nbr_Col, int Nbr_Scale,
                                         NbrUndecimatedScale = 1;
                else NbrUndecimatedScale = 0;
 
-               TabBand = new Ifloat [Nbr_Plan];
+               TabBand = new Ifloat [NbrBand];
                TabBandNl = new int [NbrBand];
                TabBandNc = new int [NbrBand];
                for (s = 0; s < NbrBand; s++)
@@ -1365,7 +1373,120 @@ void MultiResol::alloc (int Nbr_Line, int Nbr_Col, int Nbr_Scale,
 }
  
 /****************************************************************************/
+int MultiResol::computeNbBand(int Nbr_Line, int Nbr_Col,int Nbr_Scale,type_transform Transform,int NbrUndec)
+{
+  NbrUndecimatedScale = NbrUndec;
+    char ch[80];
+    int s, Nl_s=Nbr_Line, Nc_s=Nbr_Col;
+    Nl = Nbr_Line;
+    Nc = Nbr_Col;
+    if (Nbr_Scale <= 1) Nbr_Scale = get_nbr_scale( MIN(Nl,Nc) );
+    Type_Transform = Transform;
+    Set_Transform = SetTransform (Transform);
+    Nbr_Plan = Nbr_Scale;
+    NbrBand = Nbr_Plan;
+    Nbr_MrCoef=0;
+    NbrBand_per_Resol= number_band_per_resol(Transform);
+    
+    
+    switch (Transform)
+    {
+          case TO_MALLAT:
+      case TO_UNDECIMATED_MALLAT:
 
+      case TO_LC:
+
+          if (FilterBank == NULL)
+          {
+	    TypeNorm = DEF_SB_NORM;
+            SBFilter = DEF_SB_FILTER;
+           FilterBank = new FilterAnaSynt;	   	
+           FilterBank->alloc(SBFilter);	   
+	   FilterBank_Line = FilterBank;
+	   FilterBank_Column = FilterBank;
+           FilterBankAlloc=True;
+         }
+         else
+         {
+           FilterBank_Line = FilterBank;
+	   FilterBank_Column = FilterBank;
+	  
+          }
+         if (Transform == TO_LC)
+         {
+           if (LC_NbrScaleCol  <= 1) LC_NbrScaleCol = get_nbr_scale(Nc);
+           if (LC_NbrScaleLine <= 1) LC_NbrScaleLine = get_nbr_scale(Nl);
+           Nbr_Plan = LC_NbrScaleCol;
+           NbrBand = LC_NbrScaleCol * LC_NbrScaleLine;
+          }  
+	    
+      case TC_FCT:
+          {
+             FCT = new FCUR;
+             FCT->alloc_from_fine(Nbr_Scale, Nbr_Line, Nbr_Col,  FCT_Nbr_Angle, FCT_ExtendWT, FCT_IsotropWT, FCT_RealCur);
+            NbrBand = FCT->nbr_tot_band();
+          }
+      default:
+         break;
+   }
+   
+
+    if (SetTransform(Type_Transform) == TRANSF_DIADIC_MALLAT)
+    {
+	 // we allocate one buffer more than the real need
+	 // real number of band = (Nbr_Plan-1)*2 + 1    
+	 // but we allocate more band more for implementation purpose    
+	 NbrBand = Nbr_Plan*2;
+    }
+	else if ((SetTransform(Type_Transform) == TRANSF_UNDECIMATED_MALLAT) && (Type_Transform != TO_LC) && (Type_Transform != TC_FCT))
+         NbrBand = (Nbr_Plan-1)*3 + 1;
+
+
+    switch (Set_Transform)
+    {
+	case TRANSF_UNDECIMATED_MALLAT:
+             {
+	       
+	      // cout << "IN " << endl;
+                 if ((NbrUndecimatedScale < 0) || (NbrUndecimatedScale > Nbr_Plan))
+                      NbrUndecimatedScale = Nbr_Plan;
+		 if  ((Type_Transform != TO_UNDECIMATED_NON_ORTHO) && (Type_Transform != TO_LC)&& (Type_Transform != TC_FCT))
+		 {
+  	     //  cout << "WT1D " << endl;
+		  
+                     SubBandFilter WT1D(*FilterBank_Line, TypeNorm);
+		      
+                       HALF_DECIMATED_2D_WT HDWT(WT1D);
+                       NbrBand = HDWT.alloc(TabBand,Nl,Nc,Nbr_Plan,NbrUndecimatedScale);
+		       
+ 	     //  cout << "WT1D " << endl;
+		 }
+		
+		 
+                 
+             }
+             break;
+        case TRANSF_DIADIC_MALLAT:
+	case TRANSF_PAVE:                      
+	       // correct the number of band
+	       if (SetTransform(Type_Transform) == TRANSF_DIADIC_MALLAT)
+	                                                        NbrBand --;
+               break;
+
+        case TRANSF_MALLAT:
+              
+               NbrBand =  NbrBand_per_Resol*(Nbr_Plan-1)+1;
+                break;
+        case TRANSF_FEAUVEAU:               
+               NbrBand = NbrBand_per_Resol*(Nbr_Plan-1)+1;        
+               break;
+        default:
+               fprintf (stderr, "Not implemented\n");
+               exit (0);
+               break;
+    }
+    return NbrBand;
+}
 void MultiResol::print_info()
 {
     cout << "Transform = " << StringTransform(Type_Transform) << endl;
@@ -1392,26 +1513,65 @@ void MultiResol::free ()
                 cout << "~MultiResol: delete " << Name_MR << endl;
     else cout << "free of undefined object : " << Name_MR << endl;
 #endif
-
-    if (Nbr_Plan != 0) delete [] TabBand;
-    if (TabBandNl != NULL) delete[] TabBandNl;
-    if (TabBandNc != NULL) delete[] TabBandNc;
+    
+    if ((NbrBand != 0) && (TabBand != NULL)){
+	NbrBand = 0;
+	delete [] TabBand;
+	TabBand == NULL;
+    }
+    
+    if (TabBandNl != NULL){
+      delete[] TabBandNl;
+      TabBandNl = NULL;
+    }
+    if (TabBandNc != NULL){
+      delete[] TabBandNc;
+      TabBandNc = NULL;
+    }
+    
     if ((FilterBankAlloc == True) && (FilterBank != NULL)) 
     {
         delete FilterBank;
         FilterBank = NULL;
     }
+    
+    if((FilterBankAlloc == True) && (Type_Transform == TO_DIV_1 || Type_Transform == TO_DIV_2)){
+      
+       if(FilterBank_Line != NULL){
+	delete FilterBank_Line;
+	FilterBank_Line = NULL;
+    }
+    
+    if(FilterBank_Column != NULL){
+	delete FilterBank_Column;
+	FilterBank_Column = NULL;
+    }
+    }
+   
+   
     if (UndecFilterBank != NULL) 
     {
        delete UndecFilterBank;
        UndecFilterBank = NULL;
     }    
+    
     if ( ((Type_Transform == TO_PYR_MEYER_ISOTROP) || (Type_Transform == TO_PYR_MEYER))
          && (MeyerWT != NULL))  delete MeyerWT;
 
     if (Type_Transform == TC_FCT) delete FCT;
+    
+    if( Type_Transform == TO_LC){
+      if(LC != NULL){
+	delete LC;
+	LC = NULL;
+      }
+      
+      if(SBF_LC != NULL){
+	delete SBF_LC;
+	SBF_LC = NULL;
+      }
+    }
 
-    init_param();
 #if DEBUG_OBJ
 cout << " END MR " <<  endl;
 #endif

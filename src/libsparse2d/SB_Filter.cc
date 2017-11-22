@@ -54,6 +54,7 @@ void SubBand2D::transform2d (Ifloat &Data, Bool UseSameBuff, Ifloat *Horiz,
       float *PtrDet = image_g0 + Nc_2*i;
       Ptr_SB1D_LINE->transform(Nc, PtrHigh, PtrLow, PtrDet);
    }
+
    // Ifloat FF;
    // FF.getbuff(image_g0, Nc_2, Nl);
    // fits_write_fltarr ("xx_tt.fits", FF);
@@ -118,12 +119,13 @@ void SubBand2D::transform2d(Ifloat &Data, Ifloat &Horiz, Ifloat &Vert,
     int Nc = Data.nc();
     float *ImagHigh = Data.buffer();
     int j, i, Index;
-    float *image_h0, *image_g0, *Col_h0, *Col_g0, *Col_h0_h0;
-    float *Col_h0_g0, *Col_g0_h0,*Col_g0_g0;
+    float *image_h0, *image_g0;
  
     // each line is convolved by h and g
     image_h0 = new float [Nl*Nc];
     image_g0 = new float [Nl*Nc];
+#ifdef _OPENMP
+    #pragma omp parallel for private(i) shared(ImagHigh,image_h0,image_g0)
     for (i = 0; i < Nl; i++) 
     {
       float *PtrHigh = ImagHigh + Nc*i;
@@ -131,16 +133,31 @@ void SubBand2D::transform2d(Ifloat &Data, Ifloat &Horiz, Ifloat &Vert,
       float *PtrDet = image_g0 + Nc*i;
       Ptr_SB1D_LINE->transform(Nc, PtrHigh, PtrLow, PtrDet, Step);
     }
+#else
+    // Optimized code using pointers
+    float *PtrHigh = ImagHigh;
+    float *PtrLow = image_h0;
+    float *PtrDet = image_g0;
+    for (i = 0; i < Nl; i++) 
+    {
+      Ptr_SB1D_LINE->transform(Nc, PtrHigh, PtrLow, PtrDet, Step);
+      PtrHigh += Nc;
+      PtrLow += Nc;
+      PtrDet += Nc;
+    }
+#endif
 
-    Col_h0    = new float [Nl];
-    Col_g0    = new float [Nl];
-    Col_h0_h0 = new float [Nl];
-    Col_h0_g0 = new float [Nl];
-    Col_g0_h0 = new float [Nl];
-    Col_g0_g0 = new float [Nl];
-
+#ifdef _OPENMP
+    #pragma omp parallel for private(i,j,Index) shared(image_h0,image_g0)
     for (j = 0; j< Nc; j++)
     {
+        float Col_h0[Nl];
+        float Col_g0[Nl];
+        float Col_h0_h0[Nl];
+        float Col_h0_g0[Nl];
+        float Col_g0_h0[Nl];
+        float Col_g0_g0[Nl];
+
         for (i = 0; i< Nl; i++)
 	{
             Index = Nc * i + j;
@@ -158,15 +175,37 @@ void SubBand2D::transform2d(Ifloat &Data, Ifloat &Horiz, Ifloat &Vert,
 	    Diag(i,j) = Col_g0_g0[i];
         }
     }
-    
+#else
+    float Col_h0[Nl];
+    float Col_g0[Nl];
+    float Col_h0_h0[Nl];
+    float Col_h0_g0[Nl];
+    float Col_g0_h0[Nl];
+    float Col_g0_g0[Nl];
+
+    for (j = 0; j< Nc; j++)
+    {
+	Index = j;
+        for (i = 0; i< Nl; i++, Index+=Nc)
+	{
+            Col_h0[i] = image_h0[Index];
+            Col_g0[i] = image_g0[Index];
+	}
+	Ptr_SB1D_COL->transform(Nl, Col_h0, Col_h0_h0, Col_h0_g0, Step);
+ 	Ptr_SB1D_COL->transform(Nl, Col_g0, Col_g0_h0, Col_g0_g0, Step);
+        
+        for (i = 0; i< Nl; i++)
+	{
+ 	    Smooth(i,j) = Col_h0_h0[i];
+	    Vert(i,j) = Col_h0_g0[i];
+	    Horiz(i,j) = Col_g0_h0[i];
+	    Diag(i,j) = Col_g0_g0[i];
+        }
+    }
+#endif
+
     delete [] image_h0;
     delete [] image_g0;
-    delete [] Col_h0;
-    delete [] Col_g0;
-    delete [] Col_h0_h0;
-    delete [] Col_h0_g0;
-    delete [] Col_g0_h0;
-    delete [] Col_g0_g0;
 }			
 /****************************************************************************/
 
@@ -753,40 +792,61 @@ void HALF_DECIMATED_2D_WT::transform(Ifloat &Imag, Ifloat *TabTrans,
    int Nc = Imag.nc();
    Ifloat Ima_Aux(Nl,Nc,"aux");
 
-   for (int s = 0; s < Nbr_Plan-1; s++)
+    // optimized code :
+    // - move case s==0 outside of the loop to avoid an if/else test
+    // - use bit shifts instead of multiplication by 2
+#if SBDEBUG
+       cout << "Scale " << s+1 << " Step = " << Step << endl;
+       cout << "  Imag: Nl = " << Imag.nl() << " Nc = " << Imag.nc() <<  " sigma = " <<  Imag.sigma()<<  endl;
+#endif   
+    if (TabDec[0] == False) 
+    {
+       PWT.transform2d (Imag, TabTrans[0], TabTrans[1],  
+                        TabTrans[2], Ima_Aux, Step);
+       Step <<= 1;
+    }
+    else
+    {
+       SBT.transform2d (Imag, False, &(TabTrans[0]), &(TabTrans[1]),  
+	                &(TabTrans[2]), &Ima_Aux);
+    }
+    if (FiszTrans == True)
+    {
+       fisz_trans(TabTrans[0], Ima_Aux, TabDec[0]);
+       fisz_trans(TabTrans[1], Ima_Aux, TabDec[0]);
+       fisz_trans(TabTrans[2], Ima_Aux, TabDec[0]);
+    }
+      
+#if SBDEBUG      
+      cout << "  Horiz: Nl = " << TabTrans[0].nl() << " Nc = " << TabTrans[0].nc()  <<  " sigma = " << TabTrans[0].sigma() << endl;
+      cout << "  Vert: Nl = " << TabTrans[1].nl() << " Nc = " << TabTrans[1].nc()  <<  " sigma = " << TabTrans[1].sigma() << endl;
+      cout << "  Diag: Nl = " << TabTrans[2].nl() << " Nc = " << TabTrans[2].nc()  <<  " sigma = " << TabTrans[2].sigma() << endl;
+      cout << "  Smooth: Nl = " << Ima_Aux.nl() << " Nc = " << Ima_Aux.nc()  <<  " sigma = " << Ima_Aux.sigma() << endl << endl;
+#endif
+
+   for (int s = 1; s < Nbr_Plan-1; s++)
    {
 #if SBDEBUG
        cout << "Scale " << s+1 << " Step = " << Step << endl;
-       if (s == 0) cout << "  Imag: Nl = " << Imag.nl() << " Nc = " << Imag.nc() <<  " sigma = " <<  Imag.sigma()<<  endl;
-       else cout << "  Imag: Nl = " <<   Ima_Aux.nl() << " Nc = " <<   Ima_Aux.nc() <<  " sigma = " << Ima_Aux.sigma() << endl;
+       cout << "  Imag: Nl = " <<   Ima_Aux.nl() << " Nc = " <<   Ima_Aux.nc() <<  " sigma = " << Ima_Aux.sigma() << endl;
 #endif   
-      if (s == 0)
-      {
-         if (TabDec[s] == False) 
-           PWT.transform2d (Imag, TabTrans[3*s],  TabTrans[3*s+1],  
-	            TabTrans[3*s+2], Ima_Aux, Step);
-	 else
-  	    SBT.transform2d (Imag, False, &(TabTrans[3*s]),  &(TabTrans[3*s+1]),  
-	            &(TabTrans[3*s+2]), &Ima_Aux);
-      }    
-      else 
-      {
-         Ptr_SB1D_LINE->DistPix = Step;
-	 Ptr_SB1D_COL->DistPix = Step;
-         if (TabDec[s] == False) 
-	   PWT.transform2d (Ima_Aux, TabTrans[3*s],  TabTrans[3*s+1],  
-	            TabTrans[3*s+2], Ima_Aux, Step);
-         else 
-	    SBT.transform2d (Ima_Aux, False, &(TabTrans[3*s]),  &(TabTrans[3*s+1]),  
-	            &(TabTrans[3*s+2]), &Ima_Aux);
-      }
+       Ptr_SB1D_LINE->DistPix = Step;
+       Ptr_SB1D_COL->DistPix = Step;
+       if (TabDec[s] == False)
+       {
+	 PWT.transform2d (Ima_Aux, TabTrans[3*s], TabTrans[3*s+1],  
+	                  TabTrans[3*s+2], Ima_Aux, Step);
+         Step <<= 1;
+       }
+       else 
+	 SBT.transform2d (Ima_Aux, False, &(TabTrans[3*s]), &(TabTrans[3*s+1]),  
+	                  &(TabTrans[3*s+2]), &Ima_Aux);
       if (FiszTrans == True)
       {
          fisz_trans(TabTrans[3*s], Ima_Aux, TabDec[s]);
  	 fisz_trans(TabTrans[3*s+1], Ima_Aux, TabDec[s]);
  	 fisz_trans(TabTrans[3*s+2], Ima_Aux, TabDec[s]);
       }
-      if (TabDec[s] == False) Step *= 2;
       
 #if SBDEBUG      
       cout << "  Horiz: Nl = " << TabTrans[3*s].nl() << " Nc = " << TabTrans[3*s].nc()  <<  " sigma = " << TabTrans[3*s].sigma() << endl;
@@ -794,7 +854,8 @@ void HALF_DECIMATED_2D_WT::transform(Ifloat &Imag, Ifloat *TabTrans,
       cout << "  Diag: Nl = " << TabTrans[3*s+2].nl() << " Nc = " << TabTrans[3*s+2].nc()  <<  " sigma = " << TabTrans[3*s+2].sigma() << endl;
       cout << "  Smooth: Nl = " << Ima_Aux.nl() << " Nc = " << Ima_Aux.nc()  <<  " sigma = " << Ima_Aux.sigma() << endl << endl;
 #endif
-    } 
+    }
+ 
     TabTrans[NbrBand-1] = Ima_Aux;
 }
 
@@ -909,7 +970,7 @@ static int get_nbr_scale (int N)
     int Max_SIZE_LAST_SCALE = 4;
     int Nmin = N;
     int ScaleMax;
-    ScaleMax=iround(log((float)Nmin/(float)Max_SIZE_LAST_SCALE) / log(2.)+ 1.);
+    ScaleMax=iround(log((double)Nmin/(double)Max_SIZE_LAST_SCALE) / log(2.)+ 1.);
     return (ScaleMax);
 }
 
@@ -946,7 +1007,7 @@ void fisz2d(Ifloat &Data, Ifloat &Recons,  Bool Reverse, int NbrScale,
 //                   A TROUS ALGORITHM
 /****************************************************************************/
 
-void ATROUS_2D_WT::b3spline_filtering(Ifloat & Im_in, Ifloat &Im_out,  int Step_trou, Bool GTilde)
+void ATROUS_2D_WT::b3spline_filtering(Ifloat & Im_in, Ifloat &Im_out,  int Step_trou, Bool GTilde, int nb_thr)
 {
     int Nl = Im_in.nl();
     int Nc = Im_in.nc();
@@ -956,95 +1017,169 @@ void ATROUS_2D_WT::b3spline_filtering(Ifloat & Im_in, Ifloat &Im_out,  int Step_
     double  Coeff_h2 = 1. / 16.;
     Ifloat Buff(Nl,Nc,"Buff smooth_bspline");
     type_border Type = Bord;
+    double Val;
     
     Step = (int)(pow((double)2., (double) Step_trou) + 0.5);
-
+    
+    #ifdef _OPENMP
+    if(nb_thr <1) nb_thr=1;
+    #pragma omp parallel for private(i,j,Val) schedule(static) shared(Nl,Nc,Coeff_h0,Coeff_h1,Coeff_h2,Step,Type,Buff) num_threads(nb_thr)
+    #endif
     for (i = 0; i < Nl; i ++)
-    for (j = 0; j < Nc; j ++)
-    {
-       double Val = Coeff_h0 * (double) Im_in(i,j)
-                 + Coeff_h1 * (  Im_in (i, j-Step, Type) 
-                               + Im_in (i, j+Step, Type)) 
-                 + Coeff_h2 * (  Im_in (i, j-2*Step, Type) 
-                               + Im_in (i, j+2*Step, Type));
-       Buff(i,j) = (float) Val;
-    }
-
+        for (j = 0; j < Nc; j ++)
+        {
+            Val = Coeff_h0 * (double) Im_in(i,j)
+            + Coeff_h1 * (  Im_in (i, j-Step, Type) 
+                          + Im_in (i, j+Step, Type)) 
+            + Coeff_h2 * (  Im_in (i, j-2*Step, Type) 
+                          + Im_in (i, j+2*Step, Type));
+            Buff(i,j) = (float) Val;
+        }
+    
+    #ifdef _OPENMP
+    #pragma omp parallel for private(i,j) schedule(static) shared(Nl,Nc,Coeff_h0,Coeff_h1,Coeff_h2,Step,Type,Buff) num_threads(nb_thr)
+    #endif
+    
     for (i = 0; i < Nl; i ++)
-    for (j = 0; j < Nc; j ++)
-       Im_out(i,j) = Coeff_h0 * Buff(i,j)
-                 + Coeff_h1 * (  Buff (i-Step, j, Type) 
-                               + Buff (i+Step, j, Type)) 
-                + Coeff_h2 * (  Buff (i-2*Step, j, Type) 
-                               + Buff (i+2*Step, j, Type));
-
+        for (j = 0; j < Nc; j ++)
+            Im_out(i,j) = Coeff_h0 * Buff(i,j)
+            + Coeff_h1 * (  Buff (i-Step, j, Type) 
+                          + Buff (i+Step, j, Type)) 
+            + Coeff_h2 * (  Buff (i-2*Step, j, Type) 
+                          + Buff (i+2*Step, j, Type));
+    
     if (GTilde == True)  Im_out += Im_in;
 }
 
 
 /****************************************************************************/
 
-void ATROUS_2D_WT::transform(Ifloat &Image, Ifloat *TabBand, int NbrScale)
+void ATROUS_2D_WT::transform(Ifloat &Image, Ifloat *TabBand, int NbrScale, int nb_thr)
 {
-   int s;
-   TabBand[0] = Image;
-   Ifloat Data_out;
-   
-   if (ModifiedAWT == True) Data_out.alloc(Image.nl(), Image.nc()," Buff ATW");
-   
-   for (s = 0; s < NbrScale-1; s++)
-   {
-        b3spline_filtering(TabBand[s], TabBand[s+1], s);
-	if (ModifiedAWT == True) 
+    int s;
+    TabBand[0] = Image;
+    Ifloat Data_out;
+    
+    if (ModifiedAWT == True) Data_out.alloc(Image.nl(), Image.nc()," Buff ATW");
+    
+    for (s = 0; s < NbrScale-1; s++)
+    {
+        b3spline_filtering(TabBand[s], TabBand[s+1], s,nb_thr);
+        if (ModifiedAWT == True) 
         {
-            b3spline_filtering(TabBand[s+1], Data_out, s);
+            b3spline_filtering(TabBand[s+1], Data_out, s,nb_thr);
             TabBand[s] -= Data_out;
         }
         else TabBand[s] -= TabBand[s+1];
-   }
+    }
 }
 
 /****************************************************************************/
 
-void ATROUS_2D_WT::recons(Ifloat *TabBand, Ifloat &Image, int NbrScale, Bool AddLastScale)
+void ATROUS_2D_WT::recons(Ifloat *TabBand, Ifloat &Image, int NbrScale, Bool AddLastScale, int nb_thr)
 {
-   int i,j,s;
- 
-   if ((ModifiedAWT == False) && (AdjointRec == False))
-   { 
-      int Last_Scale_Used = (AddLastScale == True) ? NbrScale : NbrScale-1;
-      Image = TabBand[0];
-      for (s = 1; s < Last_Scale_Used; s++) Image += TabBand[s];
-   } 
-   else
-   {
-       Ifloat temp(Image.nl(), Image.nc(), "Rec adjoint pave");
-       if (AddLastScale == True) Image = TabBand[NbrScale-1];
-       else Image.init();
-       
-       if (ModifiedAWT == True)
-       {
-          //cout << " MOD REC" << endl;
-          for (s=NbrScale-2; s>= 0 ; s--)
-          {
-	     b3spline_filtering (Image, temp, s);
-	     for (i=0; i < Image.nl(); i++)
-	     for (j=0; j < Image.nc(); j++) Image(i,j) = temp(i,j) +  (TabBand[s])(i,j);
-          }
-       }
-       else 
-       {
-          //cout << " ADJOINT REC" << endl;
-          for (s=NbrScale-2; s>= 0 ; s--)
-          {
-	     // int Step = (int)(pow((double)2., (double) s) + 0.5);
-	     // cout << " Scale " << s << ": Step = " << Step <<  endl;
-	     b3spline_filtering (Image, temp, s);
-	     b3spline_filtering (TabBand[s], Image, s, True);
-	     Image += temp;
-          }
-       }
-   }
+    int i,j,s;
+    
+    if(nb_thr <1) nb_thr=1;
+    
+    if ((ModifiedAWT == False) && (AdjointRec == False))
+    { 
+        int Last_Scale_Used = (AddLastScale == True) ? NbrScale : NbrScale-1;
+        Image = TabBand[0];
+        for (s = 1; s < Last_Scale_Used; s++) 
+    #ifdef _OPENMP
+    #pragma omp parallel for private(i,j) schedule(static) shared(s) num_threads(nb_thr)
+    #endif
+            for (i=0; i < Image.nl(); i++) {
+		     	for (j=0; j < Image.nc(); j++) Image(i,j) += (TabBand[s])(i,j);
+            }
+    } 
+    else
+    {
+        Ifloat temp(Image.nl(), Image.nc(), "Rec adjoint pave");
+        if (AddLastScale == True) Image = TabBand[NbrScale-1];
+        else Image.init();
+        
+        if (ModifiedAWT == True)
+        {
+           // cout << " MOD REC" << endl;
+            for (s=NbrScale-2; s>= 0 ; s--)
+            {
+                b3spline_filtering (Image, temp, s,nb_thr);
+                
+    #ifdef _OPENMP
+    #pragma omp parallel for private(i,j) schedule(static) shared(s) num_threads(nb_thr)
+    #endif
+                for (i=0; i < Image.nl(); i++) {
+                    for (j=0; j < Image.nc(); j++) Image(i,j) = temp(i,j) +  (TabBand[s])(i,j);
+                }
+            }
+        }
+        else 
+        {
+           // cout << " ADJOINT REC" << endl;
+            for (s=NbrScale-2; s>= 0 ; s--)
+            {
+                // int Step = (int)(pow((double)2., (double) s) + 0.5);
+                // cout << " Scale " << s << ": Step = " << Step <<  endl;
+                b3spline_filtering (Image, temp, s,nb_thr);
+                b3spline_filtering (TabBand[s], Image, s, True,nb_thr);
+    #ifdef _OPENMP
+    #pragma omp parallel for private(i,j) schedule(static) num_threads(nb_thr)
+    #endif
+                for (i=0; i < Image.nl(); i++) {
+                    for (j=0; j < Image.nc(); j++) Image(i,j) += temp(i,j) ;
+                }
+            }
+        }
+    }
+}
+
+/****************************************************************************/
+
+void ATROUS_2D_WT::adjoint_recons(Ifloat *TabBand, Ifloat &RecIma, int NbrScale, Bool AddLastScale, int nb_thr)
+{
+    int i,j,s;
+    
+    if(nb_thr <1) nb_thr=1;
+    
+    {
+        Ifloat temp(RecIma.nl(), RecIma.nc(), "Rec1 adjoint pave");
+        Ifloat Temp1(RecIma.nl(), RecIma.nc(), "Rec2 adjoint pave");
+        if (AddLastScale == True) RecIma = TabBand[NbrScale-1];
+        else RecIma.init();
+        // if (AddLastScale == True) cout << " REC AddLastScale" << endl;
+        // else cout << " REC NO AddLastScale" << endl;
+        for (s=NbrScale-2; s>= 0 ; s--)
+        {
+                // int Step = (int)(pow((double)2., (double) s) + 0.5);
+                // cout << " Scale " << s << ": Step = " << Step <<  endl;
+
+            b3spline_filtering (RecIma, temp, s,nb_thr);
+            // temp.info("temp");
+            if (ModifiedAWT == False) 
+            {
+               // cout << " ADJOINT REC1" << endl;
+               b3spline_filtering (TabBand[s], RecIma, s,nb_thr);
+               // RecIma.info("w");
+            }
+            else 
+            {
+                // cout << " ADJOINT REC2" << endl;
+                b3spline_filtering (TabBand[s], Temp1, s, nb_thr);
+                b3spline_filtering (Temp1, RecIma, s, nb_thr);
+            }
+
+#ifdef _OPENMP
+#pragma omp parallel for private(i,j) schedule(static) num_threads(nb_thr)
+#endif
+            for (i=0; i < RecIma.nl(); i++) 
+            {
+                for (j=0; j < RecIma.nc(); j++) 
+                    RecIma(i,j) = temp(i,j) + (TabBand[s])(i,j) - RecIma(i,j)  ;  // c_j = h * c_{j+1} + (Id - h) w_j
+            }
+        }
+     }
 }
 
 /****************************************************************************/
@@ -1062,7 +1197,7 @@ void ATROUS_2D_WT::alloc (Ifloat * & TabBand, int Nl, int Nc, int NbrBand)
     TabBand = new Ifloat [NbrBand];
     for (int s = 0; s < NbrBand; s++)
     {
-	sprintf (ch, "band_%d", s+1);
+        sprintf (ch, "band_%d", s+1);
         TabBand[s].alloc (Nl, Nc, ch);   
     }
 }
@@ -1071,11 +1206,11 @@ void ATROUS_2D_WT::alloc (Ifloat * & TabBand, int Nl, int Nc, int NbrBand)
 
 float ATROUS_2D_WT::norm_band(int s)
 {
-   static double TN[10] = 
+    static double TN[10] = 
     {0.889434,  0.200105, 0.0857724, 0.0413447, 0.0202689, 0.00995628, 0.00513504,
-     0., 0., 0.};
-   if ((s < 0) || (s >= 10)) return 0;
-   else return TN[s];
+        0., 0., 0.};
+    if ((s < 0) || (s >= 10)) return 0;
+    else return TN[s];
 }
 
 /****************************************************************************/

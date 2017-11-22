@@ -585,7 +585,7 @@ float MRNoiseModel::prob(float Val, int b, int i, int j)
        case NOISE_EVENT_POISSON:
          {
             int k,l,Win = (int) (pow((double)2., (double)(b+2)) + 0.5);
-            int Nevent = 0;
+            double Nevent = 0;
             for (k =i-Win; k <= i+Win; k++)
             for (l =j-Win; l <= j+Win; l++)
                Nevent += Event_Image(k, l, Border);
@@ -595,9 +595,9 @@ float MRNoiseModel::prob(float Val, int b, int i, int j)
 	    }
 	    //P = CEventPois->a_trou_prob(Val, Nevent, b);
 	    if( mOldPoisson )
-	       P = CFewEventPoisson2d->a_trou_prob( Val, Nevent, b );
+	       P = CFewEventPoisson2d->a_trou_prob( Val, (int ) (Nevent+0.5), b );
 	    else
-	       P = CFewEvent2d->a_trou_prob( Val, Nevent, b );  
+	       P = CFewEvent2d->a_trou_prob( Val,  (int ) (Nevent+0.5), b );  
           }
 	 break;
 	case NOISE_CORREL:
@@ -637,7 +637,7 @@ void MRNoiseModel::prob (MultiResol &MR_Data, Bool Complement)
     {
        case NOISE_EVENT_POISSON:
         {
-          Iint EventCount(Nl,Nc,"ImagCount");
+          Ifloat EventCount(Nl,Nc,"ImagCount");
           for (s = 0; s < MR_Data.nbr_band()-1; s++)
           {
              event_one_scale(Event_Image, s, EventCount, MR_Data.Border);
@@ -650,12 +650,9 @@ void MRNoiseModel::prob (MultiResol &MR_Data, Bool Complement)
 	     }
              //MR_Data(s,i,j) = CEventPois->a_trou_prob(MR_Data(s,i,j), EventCount(i,j), s);
              if( mOldPoisson )
-	        MR_Data(s,i,j) = CFewEventPoisson2d->a_trou_prob( MR_Data(s,i,j),
-		                                                  EventCount(i,j),
-								  s );
+                 MR_Data(s,i,j) = CFewEventPoisson2d->a_trou_prob( MR_Data(s,i,j),  (int) ( EventCount(i,j)+0.5),  s );
              else
-                MR_Data(s,i,j) = CFewEvent2d->a_trou_prob( MR_Data(s,i,j), 
-		                                           EventCount(i,j), s );
+                MR_Data(s,i,j) = CFewEvent2d->a_trou_prob( MR_Data(s,i,j),  (int) ( EventCount(i,j)+0.5), s );
 	     
 	     if (Complement == True) MR_Data(s,i,j) = 1. - MR_Data(s,i,j) ;
              }
@@ -707,7 +704,7 @@ void MRNoiseModel::prob_noise (MultiResol &MR_Data, Bool Complement)
     {
        case NOISE_EVENT_POISSON:
         {
-          Iint EventCount(Nl,Nc,"ImagCount");
+          Ifloat EventCount(Nl,Nc,"ImagCount");
           for (s = 0; s < MR_Data.nbr_band()-1; s++)
           {
              event_one_scale(Event_Image, s, EventCount, MR_Data.Border);
@@ -723,17 +720,13 @@ void MRNoiseModel::prob_noise (MultiResol &MR_Data, Bool Complement)
 		 double P1, P2;
 //std::cout << "s:" << s << ", [x:" << i << ",y:" << j << "]" << std::endl;
 		 if( mOldPoisson ) {
-                    P1 = CFewEventPoisson2d->a_trou_repartition( MR_Data(s,i,j), 
-		                                                EventCount(i,j),
-							        s);
+                    P1 = CFewEventPoisson2d->a_trou_repartition( MR_Data(s,i,j), (int) (EventCount(i,j)+0.5),  s);
 		    if (MR_Data(s,i,j) > 0) P1 = 1. - P1;
                     if (Complement == True) MR_Data(s,i,j) = 1. - P1;
 		    else MR_Data(s,i,j) = P1;
                  } else {
-		    P1 = CFewEvent2d->a_trou_repartition( MR_Data(s,i,j), 
-		                                         EventCount(i,j), s);
-		    P2 = CFewEvent2d->a_trou_repartition( MR_Data(s,i,j), 
-		                                         EventCount(i,j), s, True);
+		    P1 = CFewEvent2d->a_trou_repartition( MR_Data(s,i,j),  (int) (EventCount(i,j)+0.5), s);
+		    P2 = CFewEvent2d->a_trou_repartition( MR_Data(s,i,j),  (int) (EventCount(i,j)+0.5), s, True);
 //std::cout << "MRNoiseModel::prob_noise : P1 = " << P1 << ", 1-P1 = " << 1. - P1
 //          << ", P2 = " << P2 << std::endl;
                     if (Complement == True) MR_Data(s,i,j) = 1. - P2;
@@ -771,17 +764,17 @@ float MRNoiseModel::prob_noise(float Val, int b, int i, int j)
 	        exit(-1);
 	   }
 	   int k,l,Win = (int) (pow((double)2., (double)(b+2)) + 0.5);
-           int Nevent = 0;
+           float Nevent = 0;
            for (k =i-Win; k <= i+Win; k++)
            for (l =j-Win; l <= j+Win; l++)
               Nevent += Event_Image(k, l, Border);
            //P = CEventPois->a_trou_repartition(Val, Nevent, b);
 	   if( mOldPoisson ) {
-              P = CFewEventPoisson2d->a_trou_repartition(Val, Nevent, b);
+              P = CFewEventPoisson2d->a_trou_repartition(Val, (int) (Nevent+0.5), b);
 	      if (Val > 0) P = 1. - P; 
 	   } else {
 	      //double P1 = CFewEvent2d->a_trou_repartition(Val, Nevent, b);
-	      double P2 = CFewEvent2d->a_trou_repartition( Val, Nevent, b, True );
+	      double P2 = CFewEvent2d->a_trou_repartition( Val, (int) (Nevent+0.5), b, True );
    // std::cout << "MRNoiseModel::prob_noise : P1 = " << P1 << ", 1-P1 = " << 1. - P1  << ", P2 = " << P2 << std::endl;
               P = P2;
 	   }	  
@@ -816,8 +809,8 @@ float MRNoiseModel::prob_noise(float Val, int b, int i, int j)
 }
 
 /****************************************************************************/
-double 
-MRNoiseModel:: prob_signal_few_event( float Val, int b, int i, int j )  
+
+double MRNoiseModel:: prob_signal_few_event( float Val, int b, int i, int j )  
 {
 
    double P = 0 ;    
@@ -826,19 +819,19 @@ MRNoiseModel:: prob_signal_few_event( float Val, int b, int i, int j )
       exit( -1 ) ;
    }
    int k,l,Win = (int) ( pow((double)2., (double)( b+2 )) + 0.5) ;
-   int Nevent = 0 ;
+   float Nevent = 0.;
    for( k =i-Win; k <= i+Win; k++ )
    for( l =j-Win; l <= j+Win; l++ )
       Nevent += Event_Image(k, l, Border) ;
    if( mOldPoisson ) {
-      P = CFewEventPoisson2d->a_trou_repartition( Val, Nevent, b ) ;
+      P = CFewEventPoisson2d->a_trou_repartition( Val, (int) (Nevent+0.5), b ) ;
       if( Val > 0 ) P = 1. - P ; 
    } else {
       //double P1 = CFewEvent2d->a_trou_repartition(Val, Nevent, b);
-      P = CFewEvent2d->a_trou_repartition( Val, Nevent, b, True ) ;
+      P = CFewEvent2d->a_trou_repartition( Val, (int) (Nevent+0.5), b, True ) ;
       //std::cout << "MRNoiseModel::prob_signal_few_event : P = " << std::endl ;
    }  
-   if( kill_coef( b, i, j, Val, False ) == True ) P = 1. ; 
+   if (kill_coef( b, i, j, Val, False ) == True ) P = 1. ; 
    return P;
 }
 
@@ -1459,7 +1452,7 @@ void MRNoiseModel::set_support(MultiResol &MR_Data)
 	      //else 
 	         // NSigma[b] = ABS(xerf(PDet/2.));
 	        NSigma[b] = ABS(xerfc(0.5+(1-PDet)/2.));
-		if((NSigma[b] < 5)||(NSigma[b] > 0))
+		if((NSigma[b] < 5) && (NSigma[b] > 0))
 			NSigma[b] = ABS(xerfc(0.5+(1-PDet)/2.));
 		else
 			NSigma[b] = 5;
@@ -1897,7 +1890,7 @@ void MRNoiseModel::set_sigma(Ifloat & Imag, MultiResol &MR_Data)
 
     noise_compute (MR_Data);
 
-//cout << "noise_compute: set_sigma : Noise = " << SigmaNoise << endl;
+// cout << "noise_compute: set_sigma : Noise = " << SigmaNoise << endl;
 //Imag.info("MM");
     if ((SigmaNoise < FLOAT_EPSILON) && (NewStatNoise == NOISE_GAUSSIAN))
     {
@@ -1993,15 +1986,19 @@ void MRNoiseModel::set_sigma(Ifloat & Imag, MultiResol &MR_Data)
        break;
     case NOISE_UNDEFINED:
       {
+       //   cout << "NOISE_UNDEFINED " << endl;
        Ifloat ImaSigmaNoise(Nl, Nc, "ImaSigmaNoise");
        int BlockSize = SizeBlockSigmaNoise;
        for (b = 0; b < NbrBand-1; b++)
        {
+          // cout << "Band " << b+1 << endl;
            int Nlb = MR_Data.size_band_nl(b);
            int Ncb = MR_Data.size_band_nc(b);
            float SigmaScale, MeanScale;
            //details which_detail;
            //MR_Data.band_to_scale(b, s, which_detail);
+           // cout << "sigma_clip " << Nlb << " " << Ncb << endl;
+   
            sigma_clip(MR_Data.band(b), MeanScale, SigmaScale, NiterSigmaClip);
            ImaSigmaNoise.resize(Nlb, Ncb);
 	   // If we want the full resolution, we need to uncomment the next line.
@@ -2009,8 +2006,10 @@ void MRNoiseModel::set_sigma(Ifloat & Imag, MultiResol &MR_Data)
 	   // at a distance of BlockSize/2
            // im_sigma(MR_Data.band(b), ImaSigmaNoise, BlockSize, NiterSigmaClip);
 	   // use the MAD instead of sigma_clipping: im_sigma_block_mad(MR_Data.band(b), ImaSigmaNoise, BlockSize, 32);
-           im_sigma_block(MR_Data.band(b), ImaSigmaNoise, BlockSize, NiterSigmaClip, BlockSize/2);
-           for (i = 0; i < Nlb;i++)
+          // cout << "im_sigma_block " << BlockSize << " " << NiterSigmaClip << " " << BlockSize/2 << endl;
+          im_sigma_block(MR_Data.band(b), ImaSigmaNoise, BlockSize, NiterSigmaClip, BlockSize/2);
+          //  cout << "out_sigma_block " << Nlb << " " << Ncb <<  endl;
+        for (i = 0; i < Nlb;i++)
            for (j = 0; j < Ncb; j++)
            {
                Ind = index(b,i,j);
@@ -2021,25 +2020,26 @@ void MRNoiseModel::set_sigma(Ifloat & Imag, MultiResol &MR_Data)
 		|| ((Set_Transform == TRANSF_DIADIC_MALLAT)  && (b%2 == 1)))
 		BlockSize *=2;
         }
+        //   cout << "END NOISE_UNDEFINED " << endl;
+
      }
      break;
    case NOISE_EVENT_POISSON:
      {
-        Iint EventCount(Nl,Nc,"ImagCount");
+        Ifloat EventCount(Nl,Nc,"ImagCount");
         float alpha;
         for (s = 0; s < MR_Data.nbr_band()-1; s++)
         {
-	    alpha=1.;
+	        alpha=1.;
             for (int sc=0; sc < s; sc++) alpha *= 4.;
             event_one_scale(Event_Image, s, EventCount, MR_Data.Border);
             for (i=0;i<Nl;i++)
             for (j=0;j<Nc;j++)
             {
-	     Ind = index(s,i,j);
-	     TabLevel[Ind] = 
-	        SIGMA_BSPLINE_WAVELET * sqrt((float) EventCount(i,j)) / alpha;
-	    }	    
-	}
+                Ind = index(s,i,j);
+                TabLevel[Ind] =  SIGMA_BSPLINE_WAVELET * sqrt((float) EventCount(i,j)) / alpha;
+            }	    
+        }
       }	 
      break;
    default: break;
@@ -2182,6 +2182,9 @@ void MRNoiseModel::model(Ifloat & Imag, MultiResol &MR_Data)
     FilterBank = MR_Data.filter_bank();
     NbrUndecimatedScale = MR_Data.nbr_undec_scale();
     MR_Data.SigmaNoise = SigmaNoise;
+
+    // cout << "MR_Data.transform" << endl;
+
     MR_Data.transform(Imag);
     
     switch (TypeNoise)
@@ -2198,8 +2201,11 @@ void MRNoiseModel::model(Ifloat & Imag, MultiResol &MR_Data)
         case NOISE_NON_UNI_ADD:
         case NOISE_UNDEFINED:
         case NOISE_UNI_UNDEFINED:
+            // cout << "set_sigma" << endl;
 	      set_sigma(Imag, MR_Data);
- 	      set_support(MR_Data);
+           //  cout << "set_support" << endl;
+	      set_support(MR_Data);
+           // cout << "ok" << endl;
 	      break;
 	case NOISE_CORREL:
 	       if (CorrelNoiseMap != NULL) delete CorrelNoiseMap;
@@ -2222,8 +2228,8 @@ void MRNoiseModel::model(Ifloat & Imag, MultiResol &MR_Data)
                 }
 		else
 		{
-		  set_sigma(Imag, MR_Data);
-                  set_support(MR_Data);
+            set_sigma(Imag, MR_Data);
+            set_support(MR_Data);
 		}	     
 		break;
 	case NOISE_SPECKLE:

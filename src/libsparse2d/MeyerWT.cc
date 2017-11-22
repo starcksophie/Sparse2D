@@ -188,9 +188,10 @@ void MEYER_WT::get_extFourier(Ifloat &Data, Icomplex_f & TF_ExtData)
     int Nl = Data.nl();
     int Nc = Data.nc(); 
     int Nl2 = Nl/2; 
-    int Nc2 = Nc/2;  
+    int Nc2 = Nc/2; 
+
     
-    // cout << "get_extFourier" << endl;
+     //cout << "get_extFourier" << endl;
      TF_ExtData.resize(ExtNl,ExtNc);
      if (Extend == True)
      {
@@ -221,7 +222,7 @@ void MEYER_WT::get_extFourier(Ifloat &Data, Icomplex_f & TF_ExtData)
        for(i=0; i<Nl; i++)
        for(j=0; j<Nc; j++)  TF_ExtData(i,j) /= Norm;
     }    
-     // cout << "END get_extFourier" << endl;
+    //cout << "END get_extFourier" << endl;
 
 }
 
@@ -292,6 +293,7 @@ void MEYER_WT::transform_cf(Icomplex_f & TF_ExtData,  Icomplex_f * &TabWT)
    double DNL = D_ExtNl;
    double DNC = D_ExtNc;
    
+   //cout << "transform_cf()" << endl;
    // TabWT = new Icomplex_f [NbrScale];
    if (TabWT == NULL)
    {
@@ -347,6 +349,7 @@ void MEYER_WT::transform_cf(Icomplex_f & TF_ExtData,  Icomplex_f * &TabWT)
       DNL =  DNL/2.;
       DNC =  DNC/2.;
    }
+  //cout << "END transform_cf()" << endl;
 }
 /*********************************************************************/
 

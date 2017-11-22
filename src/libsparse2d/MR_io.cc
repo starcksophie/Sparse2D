@@ -308,7 +308,6 @@ void MultiResol::write (char *Name)
                Data(ind++) = size_band_nc(b);
                for (int i=0;  i < size_band_nl(b); i++)
                for (int j=0;  j < size_band_nc(b); j++) Data(ind++) = (*this)(b,i,j);
-       
             }
             naxes[0] = ind;
             fpixels[0]=1; 

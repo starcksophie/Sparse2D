@@ -9,79 +9,88 @@
 **    Author: Jean-Luc Starck
 **
 **    Date:  96/05/02
-**    
+**
 **    File:  mr_transform.cc
 **
 *******************************************************************************
 **
 **    DESCRIPTION  multiresolution transform  an image
-**    ----------- 
-**                 
-**    PARAMETRES    
-**    ---------- 
+**    -----------
+**
+**    PARAMETRES
+**    ----------
 **
 **    USAGE: mr_transform option image output
-**        where options = 
+**        where options =
 **
 **          [-t type_of_multiresolution_transform]
-**                  1: linear wavelet transform: a trous algorithm 
-**                  2: bspline wavelet transform: a trous algorithm 
-**                  3: wavelet transform in Fourier space 
-**                  4: morphological median transform 
-**                  5: morphological minmax transform 
-**                  6: pyramidal linear wavelet transform 
-**                  7: pyramidal bspline wavelet transform 
-**                  8: pyramidal wavelet transform in Fourier space: 
-**                     wavelet =  between two resolutions 
-**                  9: pyramidal wavelet transform in Fourier space: 
-**                     wavelet = difference  between the square 
+**                  1: linear wavelet transform: a trous algorithm
+**                  2: bspline wavelet transform: a trous algorithm
+**                  3: wavelet transform in Fourier space
+**                  4: morphological median transform
+**                  5: morphological minmax transform
+**                  6: pyramidal linear wavelet transform
+**                  7: pyramidal bspline wavelet transform
+**                  8: pyramidal wavelet transform in Fourier space:
+**                     wavelet =  between two resolutions
+**                  9: pyramidal wavelet transform in Fourier space:
+**                     wavelet = difference  between the square
 **                                                of two resolutions
-**                 10: pyramidal median transform 
-**                 11: morphological pyramidal minmax transform 
-**                 12: pyramidal laplacian 
-**                 13: decomposition on scaling function 
-**                 14: Mallat's wavelet transform 
-**                 15: G transform (morphological min-max algorithm 
-**                 16: Feauveau's wavelet transform 
-**                 17: Haar's wavelet transform 
-**                 18: Feauveau's wavelet transform without undersampling 
+**                 10: pyramidal median transform
+**                 11: morphological pyramidal minmax transform
+**                 12: pyramidal laplacian
+**                 13: decomposition on scaling function
+**                 14: Mallat's wavelet transform
+**                 15: G transform (morphological min-max algorithm
+**                 16: Feauveau's wavelet transform
+**                 17: Haar's wavelet transform
+**                 18: Feauveau's wavelet transform without undersampling
 **
 **                 default is 2
 **                 17 is not yet implemented
-**   
+**
 **           [-n number_of_scales]
 **                number of scales used in the multiresolution transform
 **                default is 4
 **
-**           [-x] 
+**           [-x]
 **                write all scales separately as images with prefix "scale_j"
 **                (j being the scale number)
 **
-**           [-b] 
+**           [-b]
 **                same as x option, but interpolate by block the scales.
-**                This option is valid only if the choosen multiresolution 
+**                This option is valid only if the choosen multiresolution
 **                transform is pyramidal (6,7,8,9,10,11,12)
 **
-**           [-i] 
+**           [-i]
 **                same as x option, but interpolate by B3-spline the scales.
-**                This option is valid only if the choosen multiresolution 
+**                This option is valid only if the choosen multiresolution
 **                transform is pyramidal (6,7,8,9,10,11,12)
 **
-**           [-c iter] 
+**           [-c iter]
 **                iterative transformation. Iter = number of iterations.
-**                This option is valid only if the choosen multiresolution 
+**                This option is valid only if the choosen multiresolution
 **                transform is pyramidal (6,7,8,9,10,11). The reconstruction
 **                is not exact and we need few iterations. Generally 3
 **                iterations are enough.
 **
 **
 ******************************************************************************/
- 
+
 #include "IM_Obj.h"
 #include "IM_IO.h"
 #include "MR_Obj.h"
 // #include "CPU_Time.h"
 #include "IM_Prob.h"
+
+// Fabrice Poupon 2017/03/14
+// For performance monitoring during code optimization
+// This was only used on Unix-based systems
+// Uncomment the line below to activate it
+//#define FP_CPU_TIMING
+#ifdef FP_CPU_TIMING
+#include <sys/time.h>
+#endif
 
 char NamePre[256];
 char Name_Imag_In[256]; /* input file image */
@@ -90,11 +99,11 @@ int Nbr_Plan=DEFAULT_NBR_SCALE;  /* number of scales */
 type_transform Transform = DEFAULT_TRANSFORM; /* type of transform */
 type_lift LiftingTrans = DEF_LIFT;
 
-Bool WriteScalex = False;          /* write each scale separately on the disk 
+Bool WriteScalex = False;          /* write each scale separately on the disk
                                       with x option */
-Bool WriteScaleb = False;          /* write each scale separately on the disk 
+Bool WriteScaleb = False;          /* write each scale separately on the disk
                                       with b option */
-Bool WriteScalei = False;          /* write each scale separately on the disk 
+Bool WriteScalei = False;          /* write each scale separately on the disk
                                       with i option */
 int Iterc = 0;                     /* Iterative option */
 int NbrUndec = -1;                     /*number of undecimated scale */
@@ -104,14 +113,14 @@ extern char *OptArg;
 
 extern int  GetOpt(int argc, char *const*argv, char *opts);
 Bool Verbose = False;
- 
+
 sb_type_norm Norm = NORM_L1;
 type_sb_filter SB_Filter = F_MALLAT_7_9;
 type_border Bord = I_CONT;
 Bool OptS = False;
 type_undec_filter U_Filter = DEF_UNDER_FILTER;
 
-#define TR_DEBUG 0 
+#define TR_DEBUG 0
 
 /*********************************************************************/
 
@@ -123,19 +132,19 @@ static void usage(char *argv[])
     manline();
     all_transform_usage(Transform);
     manline();
-    
+
     lifting_usage(LiftingTrans);
     manline();
-    
+
     nbr_scale_usage(Nbr_Plan);
     manline();
-    
+
     write_scales_x_band_usage();
     manline();
-    
+
     write_scales_b_usage();
     manline();
- 
+
     iter_transform_usage();
     manline();
     sb_usage(SB_Filter);
@@ -147,14 +156,14 @@ static void usage(char *argv[])
 
     vm_usage();
     manline();
-    verbose_usage();    
+    verbose_usage();
     manline();
     manline();
     exit(-1);
 }
 
 /*********************************************************************/
- 
+
 /* GET COMMAND LINE ARGUMENTS */
 static void transinit(int argc, char *argv[])
 {
@@ -164,35 +173,35 @@ static void transinit(int argc, char *argv[])
     int VMSSize=-1;
     Bool OptZ = False;
     char VMSName[1024] = "";
-#endif  
-    
+#endif
+
     /* get options */
-    while ((c = GetOpt(argc,argv,"U:u:t:n:c:xBl:T:LvzZ:S")) != -1) 
+    while ((c = GetOpt(argc,argv,"U:u:t:n:c:xBl:T:LvzZ:S")) != -1)
     {
-	switch (c) 
+	switch (c)
         {
-	   case 'U': 
+	   case 'U':
 		/* -d <type> type of transform */
-		if (sscanf(OptArg,"%d",&c ) != 1) 
+		if (sscanf(OptArg,"%d",&c ) != 1)
                 {
 		    fprintf(OUTMAN, "ErrorL bad type of filters: %s\n", OptArg);
 	            exit(-1);
-                    
+
 		}
-                if ((c > 0) && (c <= NBR_UNDEC_FILTER)) 
+                if ((c > 0) && (c <= NBR_UNDEC_FILTER))
                                         U_Filter = (type_undec_filter) (c-1);
-                else  
+                else
                 {
 		    fprintf(OUTMAN, "Error: bad type of filters: %s\n", OptArg);
 	            exit(-1);
  		}
   		break;
            case 'u':
- 		if (sscanf(OptArg,"%d",&NbrUndec) != 1) 
+ 		if (sscanf(OptArg,"%d",&NbrUndec) != 1)
                 {
 		    fprintf(OUTMAN, "Error: bad number of scales: %s\n", OptArg);
 	            exit(-1);
-                    
+
 		}
   		break;
            case 'S': OptS = True; break;
@@ -200,46 +209,46 @@ static void transinit(int argc, char *argv[])
 	   case 'v': Verbose = True; break;
 	   case 't':
 		/* -d <type> type of transform */
-		if (sscanf(OptArg,"%d",&c ) != 1) 
+		if (sscanf(OptArg,"%d",&c ) != 1)
                 {
 		    fprintf(OUTMAN, "bad type of multiresolution transform: %s\n", OptArg);
 	            exit(-1);
-                    
+
 		}
-                if ((c > 0) && (c <= NBR_TOT_TRANSFORM+1)) 
+                if ((c > 0) && (c <= NBR_TOT_TRANSFORM+1))
                                         Transform = (type_transform) (c-1);
-                else  
+                else
                 {
 		    fprintf(OUTMAN, "bad type of transform: %s\n", OptArg);
 	            exit(-1);
- 		}                
+ 		}
  		break;
 	   case 'l':
- 		if (sscanf(OptArg,"%d",&c ) != 1) 
+ 		if (sscanf(OptArg,"%d",&c ) != 1)
                 {
 		    fprintf(OUTMAN, "Error: bad lifting method: %s\n", OptArg);
 	            exit(-1);
-                    
+
 		}
                 if ((c > 0) && (c <= NBR_LIFT)) LiftingTrans = (type_lift) (c);
-                else  
+                else
                 {
 		    fprintf(OUTMAN, "Error: bad lifting method: %s\n", OptArg);
 	            exit(-1);
  		}
   		break;
-	   case 'T': 
+	   case 'T':
 		Optf = True;
 		SB_Filter = get_filter_bank(OptArg);
 		break;
 	   case 'n':
 		/* -n <Nbr_Plan> */
-		if (sscanf(OptArg,"%d",&Nbr_Plan) != 1) 
+		if (sscanf(OptArg,"%d",&Nbr_Plan) != 1)
                 {
 		    fprintf(OUTMAN, "bad number of scales: %s\n", OptArg);
 		    exit(-1);
 		}
-                if ((Nbr_Plan <= 1) || (Nbr_Plan > MAX_SCALE)) 
+                if ((Nbr_Plan <= 1) || (Nbr_Plan > MAX_SCALE))
                  {
 		    fprintf(OUTMAN, "bad number of scales: %s\n", OptArg);
 		    fprintf(OUTMAN, "1 < Nbr Scales <= %d\n", MAX_SCALE);
@@ -248,12 +257,12 @@ static void transinit(int argc, char *argv[])
 		break;
  	   case 'c':
 		/* -c < nbr of iterations> */
-		if (sscanf(OptArg,"%d",&Iterc) != 1) 
+		if (sscanf(OptArg,"%d",&Iterc) != 1)
                 {
 		    fprintf(OUTMAN, "bad number of iterations: %s\n", OptArg);
 		    exit(-1);
 		}
-                if ((Iterc <= 1) || (Iterc > 20)) 
+                if ((Iterc <= 1) || (Iterc > 20))
                  {
 		    fprintf(OUTMAN, "bad number of iterations: %s\n", OptArg);
 		    fprintf(OUTMAN, "1 < Nbr Iter <= 20\n");
@@ -307,7 +316,7 @@ static void transinit(int argc, char *argv[])
   		}
 	}
 
-       /* get optional input file names from trailing 
+       /* get optional input file names from trailing
           parameters and open files */
 	if (OptInd < argc) strcpy(Name_Imag_In, argv[OptInd++]);
          else usage(argv);
@@ -327,19 +336,19 @@ static void transinit(int argc, char *argv[])
            fprintf(OUTMAN, "Error: option -c is only available with pyramidal transform ... \n");
             exit(0);
 	}
-	
+
 	if ((Transform != TO_LIFTING) && (LiftingTrans != DEF_LIFT))
 	{
            fprintf(OUTMAN, "Error: option -l is only available with lifting transform ... \n");
            exit(0);
 	}
-	
+
 	if ((Transform != TO_UNDECIMATED_MALLAT) && (Transform != TO_MALLAT) && ((OptL == True) || (Optf == True)))
 	{
 	   fprintf(OUTMAN, "Error: option -T and -L are only valid with Mallat transform ... \n");
            exit(0);
 	}
-	
+
 #ifdef LARGE_BUFF
     if (OptZ == True) vms_init(VMSSize, VMSName, Verbose);
 #endif
@@ -354,6 +363,21 @@ int main(int argc, char *argv[])
     Ifloat Dat;
     char Prefix[256];
     char Name_Imag[256];
+
+#ifdef FP_CPU_TIMING
+    struct timeval t0, t1, t2, t3, t1b;
+    gettimeofday( &t0, NULL );
+#endif
+
+#ifdef _OPENMP
+    // The maximum number of threads returned by omp_get_max_threads()
+    // (which is the default number of threads used by OMP in parallel
+    // regions) can sometimes be far below the number of CPUs.
+    // It is then required to set it in relation to the real number of CPUs
+    // (the -1 is used to live one thread to the main process which ensures
+    // better and more constant performances). - Fabrice Poupon 2013/03/09
+    omp_set_num_threads( omp_get_num_procs() - 1 );
+#endif
 
     /* Get command line arguments, open input file(s) if necessary */
     lm_check(LIC_MR1);
@@ -380,6 +404,10 @@ if (Verbose == True)
     io_read_ima_float(Name_Imag_In, Dat);
     // check_scale(Dat.nl(), Dat.nc(), Nbr_Plan);
 
+#ifdef FP_CPU_TIMING
+    gettimeofday( &t1, NULL );
+#endif
+
     MultiResol MR_Data;
     FilterAnaSynt FAS;
     FilterAnaSynt *PtrFAS = NULL;
@@ -390,10 +418,12 @@ if (Verbose == True)
         PtrFAS = &FAS;
     }
     MR_Data.alloc (Dat.nl(), Dat.nc(), Nbr_Plan, Transform, PtrFAS, Norm, NbrUndec,U_Filter);
-          
     if (Verbose == True)
         cout << "Number of bands = " << MR_Data.nbr_band()  << endl;
-           
+#ifdef FP_CPU_TIMING
+    gettimeofday( &t1b, NULL );
+#endif
+
     if ((WriteScalei==True) && (MR_Data.Set_Transform != TRANSF_PYR))
     {
          cerr << "Error: illegal interpolation option " << endl;
@@ -415,8 +445,9 @@ if (Verbose == True)
       MR_Data.transform (Dat);
     }
 
-
-
+#ifdef FP_CPU_TIMING
+    gettimeofday( &t2, NULL );
+#endif
 
     // write the results
     MR_Data.write (Name_Imag_Out);
@@ -427,7 +458,7 @@ if (Verbose == True)
 
     /* write separately each image */
     io_strcpy_prefix(Prefix,  Name_Imag_Out);
-         
+
     if (WriteScaleb==True)
     {
         Ifloat Dats (MR_Data.size_ima_nl(), MR_Data.size_ima_nc(), "Interp");
@@ -450,6 +481,20 @@ if (Verbose == True)
     }
 
 
+#ifdef FP_CPU_TIMING
+    gettimeofday( &t3, NULL );
+    double total=double(t3.tv_sec+t3.tv_usec/1000000.0-t0.tv_sec-t0.tv_usec/1000000.0);
+    double tRead=double(t1.tv_sec+t1.tv_usec/1000000.0-t0.tv_sec-t0.tv_usec/1000000.0);
+    double tAlloc=double(t1b.tv_sec+t1b.tv_usec/1000000.0-t1.tv_sec-t1.tv_usec/1000000.0);
+    double tCompute=double(t2.tv_sec+t2.tv_usec/1000000.0-t1b.tv_sec-t1b.tv_usec/1000000.0);
+    double tWrite=double(t3.tv_sec+t3.tv_usec/1000000.0-t2.tv_sec-t2.tv_usec/1000000.0);
+    cout << "Overall execution time : " << total << "s" << endl;
+    cout << "   data loading    : " << tRead << "s" << endl;
+    cout << "   allocation      : " << tAlloc << "s" << endl;
+    cout << "   computation     : " << tCompute << "s" << endl;
+    cout << "   writing results : " << tWrite << "s" << endl;
+#endif
+
 #if TR_DEBUG
 //     for (int b = 0; b < MR_Data.nbr_band(); b+=2)
 //     {
@@ -460,7 +505,7 @@ if (Verbose == True)
 //             {
 //                 MR_Data(b,i,j) = sqrt(POW(MR_Data(b,i,j),2.)+POW(MR_Data(b+1,i,j), 2.));
 //             }
-//        INFO(MR_Data.band(b), "band ");
+//        INFO_X(MR_Data.band(b), "band ");
 //      }
 //      exit(-1);
 
@@ -471,19 +516,19 @@ if (Verbose == True)
 //     Dat -= Rec;
 //     io_write_ima_float("x1.fits", Rec);
 //     io_write_ima_float("x2.fits", Dat);
-//     INFO(Dat,"Resi");
+//     INFO_X(Dat,"Resi");
     MultiResol  MM;
     MM.read(Name_Imag_Out);
     MM.recons(Rec);
     io_write_ima_float("x1.fits", Rec);
     io_write_ima_float("x2.fits", Dat);
     Dat -= Rec;
-    INFO(Dat,"Resi");
-    
+    INFO_X(Dat,"Resi");
+
     if (OptS == True)
     {
        for (s = 0; s < MR_Data.nbr_band(); s++)
-       {   
+       {
           double TMin, TMax;
           CImaProb CIP;
           CIP.Verbose = True;
@@ -497,5 +542,4 @@ if (Verbose == True)
 #endif
 
     exit(0);
-} 
-
+}

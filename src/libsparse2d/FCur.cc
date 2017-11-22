@@ -992,7 +992,7 @@ void FCUR::put_wedges(Icomplex_f * &TabWT)
 	int b,i,j;
 	double DNL =  nld();
 	double DNC =  ncd();
-	float NormVal;
+	double NormVal;
 
 	for  (int s=0; s < nbr_scale(); s++) 
 	{
@@ -1173,7 +1173,7 @@ void FCUR::get_wedges(Icomplex_f * &TabWT)
 	int b,i,j;
 	double DNL = nld();
 	double DNC = ncd();
-	float NormVal;
+	double NormVal;
 	// FFT2D.CenterZeroFreq=False;
 	for  (int s=0; s < nbr_scale(); s++) 
 	{
@@ -1236,14 +1236,19 @@ void FCUR::get_wedges(Icomplex_f * &TabWT)
 
 void FCUR::cur_trans(Ifloat &Data)
 {
+	Verbose = True;
 	if (Verbose == True) cout << "Transform WT ... " << endl;
 	if (ModifSize == False) transform(Data);
 	else
 	{
 		if (Verbose == True) cout << " NewNl... " << NewNl << endl;
 		Ifloat ModIma(NewNl, NewNc, "New");
-		for (int i=0; i < Data.nl(); i++)
-		for (int j=0; j < Data.nc(); j++) ModIma(i,j) = Data(i,j);
+                int i,j;
+#ifdef _OPENMP
+                #pragma omp parallel for private(i,j) shared(ModIma,Data)
+#endif
+		for (i=0; i < Data.nl(); i++)
+		for (j=0; j < Data.nc(); j++) ModIma(i,j) = Data(i,j);
 
 		if (NewNl != DataNl)
 			for (int j=0; j < Data.nc(); j++)

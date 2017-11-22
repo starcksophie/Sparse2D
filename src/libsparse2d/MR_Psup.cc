@@ -45,7 +45,12 @@ void building_imag_ascii(char *Name_Imag_In,Iint &Event_Image,Ifloat &Image)
    cout << "Error in allocation of file " <<  Name_Imag_In << " ... or file doesn't exist" << endl;
    exit(-1);
  }
- fscanf(input,"%d\t%d\n",&Nl,&Nc);
+ int res = fscanf(input,"%d\t%d\n",&Nl,&Nc);
+ if ( res != 2 )
+ {
+    cerr << "Unable to read image dimension" << endl;
+    exit(-1);
+ }
  /* create the resulting image */
  Event_Image.resize(Nl,Nc);
  Event_Image.init(0);
@@ -113,6 +118,52 @@ void building_imag_ascii(char *Name_Imag_In,Iint &Event_Image,Ifloat &Image)
 
 /************************************************************************/
 
+
+void building_imag_imag(Ifloat &Image, Ifloat &Event_Image)
+{	
+    int Nl,Nc,i,j,x_cur,y_cur;
+    float distance_x,distance_y,energy_x,energy_y;
+    float Dxr=0., Dyr=0.;
+    
+    // init_random();
+    Nl = Image.nl();
+    Nc = Image.nc();
+    Event_Image.resize(Nl,Nc);
+    
+    //io_write_ima_float ("Bef.fits", Image);
+    
+    Event_Image =  Image ;
+    Image.init();
+    
+    //io_write_ima_float ("Event.fits", Event_Image);
+    /* Filter with Bspline */
+    for (i=0;i<Nl;i++)
+    for (j=0;j<Nc;j++) 
+    {
+        for (x_cur=-2;x_cur<=2;x_cur++)
+        {
+            distance_x = x_cur + Dxr;
+            energy_x = (CUBE_FABS(distance_x - 2) + CUBE_FABS(distance_x + 2)
+                        - 4 * (CUBE_FABS(distance_x - 1) + CUBE_FABS(distance_x + 1))
+                        + 6 * CUBE_FABS(distance_x)) / 12.;
+            
+            for (y_cur=-2;y_cur<=2;y_cur++) 
+            {
+                distance_y = y_cur+Dyr;
+                energy_y = (CUBE_FABS(distance_y - 2) + CUBE_FABS(distance_y + 2)
+                            - 4 * (CUBE_FABS(distance_y - 1) + CUBE_FABS(distance_y + 1))
+                            + 6 * CUBE_FABS(distance_y)) / 12.;
+                if ((i+x_cur >= 0)    &&  (i+x_cur < Nl)
+                    &&  (j+y_cur >= 0)    &&  (j+y_cur < Nc))
+                    Image(i+x_cur,j+y_cur)  += energy_x * energy_y * Event_Image(i,j);
+            }  
+        }
+    }
+ }
+
+/************************************************************************/
+
+
 void building_imag_imag(Ifloat &Image, Iint &Event_Image)
 {	
  int Nl,Nc,i,j,x_cur,y_cur;
@@ -168,6 +219,41 @@ void building_imag_imag(Ifloat &Image, Iint &Event_Image)
 //io_write_ima_float ("After.fits", Image);
    
 }
+/*************************************************************************/
+
+void event_one_scale(Ifloat & Event_Image, int s, Ifloat &EventCount, type_border Border)
+{
+    int Nl,Nc,i,j,k;
+    int Size;
+    int Total=0;
+    Nl = Event_Image.nl();
+    Nc = Event_Image.nc();
+    
+    Size = (int) (pow((double)2., (double)(s+2)) + 0.5);
+    // printf("Scale %d: size = %d\n", s+1, 2*Size+1);
+    Nl = Event_Image.nl();
+    Nc = Event_Image.nc();
+    
+    for (i =0; i < Nl; i++)
+    {
+        Total = 0;
+        for (k =-Size; k <= Size; k++)
+            for (j =-Size; j <= Size; j++)
+                Total += Event_Image(i+k, j, Border);
+        
+        EventCount(i,0) = Total;
+        for (j =1; j < Nc; j++)
+        {
+            for (k = -Size; k <= Size; k++)
+            {
+                Total -= (int) Event_Image(i+k,j-Size-1,Border);
+                Total += (int) Event_Image(i+k,j+Size, Border);
+            }
+            EventCount(i,j) = Total;
+        }
+    }
+}
+
 
 
 /*************************************************************************/
@@ -223,6 +309,133 @@ void reducing_coeff(const MultiResol &MR_Data_Event, MultiResol &MR_Data)
             MR_Data(s,i,j) = MR_Data(s,i,j) * alpha 
                              / (sqrt(MR_Data_Event(s+1,i,j)) * sigma);
          else MR_Data(s,i,j) = 0.;
+}
+
+/**************************************************************************/
+
+void event_set_support(const MultiResol &MR_Data, int CurrentScale, 
+                       Ifloat &Event_Image, type_border Border,
+                       const Ifloat &I_Abaque, MRNoiseModel & Model)
+{
+    int i,j,s,Nl,Nc,n_event_real,n_event,power;
+    float seuil_max,seuil_min, Sm;
+    int ABAQUE_N_SCALE = I_Abaque.nl();
+    //float sigma=0.040717,alpha;
+    float sigma=0.0405078,alpha;
+    Nl = MR_Data.size_ima_nl();
+    Nc = MR_Data.size_ima_nc();
+    Ifloat EventCount(Nl,Nc, "EventCount");
+    
+    for (s=0,alpha=1.0;s<CurrentScale;s++) alpha *= 4;
+    
+    s = CurrentScale;
+    event_one_scale(Event_Image, s, EventCount, Border);
+    
+    //char File[80];
+    //sprintf (File, "EvImOld_%d.fits", CurrentScale);
+    //io_write_ima_float (File, Event_Image);
+    //sprintf (File, "EvCntOld_%d.fits", CurrentScale);
+    //io_write_ima_float (File,EventCount );
+    
+    for (i=0;i<Nl;i++)
+        for (j=0;j<Nc;j++) 
+        {
+            /* reading the number of events */
+            n_event_real = (int) (EventCount(i,j)+0.5);
+            
+            /* compute "power" : 2^(power-1) < n_event_real <= 2^(power) */
+            power = 0;
+            n_event = 1;
+            while (n_event<n_event_real) 
+            {
+                power ++;
+                n_event *= 2;
+            }
+            
+            /* interpolation of thresholds using abaque */
+            if (power > ABAQUE_N_SCALE) 
+            {
+                power = ABAQUE_N_SCALE;
+                seuil_min = I_Abaque(power,0);
+                seuil_max = I_Abaque(power,1);
+                //seuil_min *= Model.CFewEventPoisson2d->_HistoSigma(power);		
+                //seuil_max *= Model.CFewEventPoisson2d->_HistoSigma(power);		
+            }
+            else if (n_event_real == n_event) 
+            {
+                
+                //if (power > 0) 
+                //cout << "Sigma computed local(Event:" << n_event_real << ",Scale:" 
+                //     <<  CurrentScale << ") : " <<  sqrt((float) n_event_real) * sigma / alpha
+                //     << "Sigma in Histo : " 
+                //     << Model.CFewEventPoisson2d->_HistoSigma(power) << endl;
+                
+                seuil_min = I_Abaque(power,0);
+                seuil_max = I_Abaque(power,1);
+                
+                //seuil_min *= Model.CFewEventPoisson2d->_HistoSigma(power);		
+                //seuil_max *= Model.CFewEventPoisson2d->_HistoSigma(power);			
+            }
+            else 
+            {
+                if (power > 0)
+                {
+                    seuil_min = -2*(I_Abaque(power,0) - I_Abaque(power-1,0))
+                    *(n_event - n_event_real)/n_event + I_Abaque(power,0);
+                    seuil_max = -2*(I_Abaque(power,1) - I_Abaque(power-1,1))
+                    *(n_event -n_event_real)/n_event + I_Abaque(power,1);
+                    
+                    //float InterpSig = -2*(   Model.CFewEventPoisson2d->_HistoSigma(power) 
+                    //                       - Model.CFewEventPoisson2d->_HistoSigma(power-1))
+                    //                    *(n_event - n_event_real)/n_event 
+                    //		    + Model.CFewEventPoisson2d->_HistoSigma(power);	
+                    //seuil_min *= InterpSig;
+                    //seuil_max *= InterpSig;		
+                    
+                }
+                else
+                {
+                    seuil_min = I_Abaque(0,0);
+                    seuil_max = I_Abaque(0,1);
+                    
+                    //seuil_min *= Model.CFewEventPoisson2d->_HistoSigma(0);		
+                    //seuil_max *= Model.CFewEventPoisson2d->_HistoSigma(0);			   
+                }
+            }
+            
+            
+            if (power > 0)
+            {
+                seuil_min *= sqrt((float) n_event_real) * sigma / alpha;
+                seuil_max *= sqrt((float) n_event_real) * sigma / alpha;
+            }
+            else
+            {
+                seuil_min *=  sigma / alpha;
+                seuil_max *=  sigma / alpha;
+            }
+            
+            
+            
+            
+            
+            /* detection of signal : comparison with thresholds */
+            Model.support(s,i,j) = VAL_SupNull;
+            if ((MR_Data(s,i,j) <= seuil_min) || (MR_Data(s,i,j) >= seuil_max))
+            {
+                Model.support(s,i,j) = VAL_SupOK;
+                if (n_event_real < Model.MinEventNumber) 
+                    Model.support(s,i,j) = VAL_SupMinEv;
+                if ((Model.OnlyPositivDetect == True) && (MR_Data(s,i,j) < 0))
+                    Model.support(s,i,j) = VAL_SupNull;
+                if (Model.FirstDectectScale > s) 
+                    Model.support(s,i,j) = VAL_SupFirstScale;
+            }
+            
+            Sm = (ABS(seuil_min) > ABS(seuil_max)) ? ABS(seuil_min) : ABS(seuil_max);
+            Model.sigma(s,i,j) = Sm / Model.NSigma[s];
+            // Model.NSigma[s] = 1.;
+        } /* end FOR (j=0 ...) */
 }
 
 /**************************************************************************/
@@ -368,7 +581,7 @@ void mr_psupport(Iint &Event_Image, MultiResol &MR_Data,
 
 
  /* detecting signal : comparison with the ABAQUE of thresholds */
- cout << "Detect signal ... " << endl;
+ // cout << "Detect signal ... " << endl;
 
  for (s=0;s< NScale-1; s++)
  {
@@ -376,6 +589,29 @@ void mr_psupport(Iint &Event_Image, MultiResol &MR_Data,
  }
 }
 
+/********************************************************************/
+
+void mr_psupport(Ifloat &Event_Image, MultiResol &MR_Data, 
+                 Ifloat &I_Abaque, MRNoiseModel & Model, 
+                 type_border Border, Bool WriteAll)
+{
+    int s,Nc,Nl;
+    Nl = Event_Image.nl();
+    Nc = Event_Image.nc();
+    int NScale = MR_Data.nbr_scale();
+    
+    /* writing on disk the coefficients of wavelet */
+    if (WriteAll == True)  MR_Data.write(NAME_WAVELET_SUP);
+    
+    
+    /* detecting signal : comparison with the ABAQUE of thresholds */
+    // cout << "Detect signal ... " << endl;
+    
+    for (s=0;s< NScale-1; s++)
+    {
+        event_set_support(MR_Data, s,Event_Image,  Border, I_Abaque, Model);
+    }
+}
 
 /********************************************************************/
 
@@ -383,7 +619,7 @@ void mr_psupport(MultiResol &MR_Data, MRNoiseModel & Model, type_border Border)
 {
  int i,j,s;
  int NScale = MR_Data.nbr_scale();
- Iint EventCount;
+ Ifloat EventCount;
  int Nl = MR_Data.size_ima_nl();
  int Nc = MR_Data.size_ima_nc();   
 	
@@ -396,15 +632,17 @@ void mr_psupport(MultiResol &MR_Data, MRNoiseModel & Model, type_border Border)
     //                  Model.CEventPois->Threshold, Model);
     if (Model.TypeThreshold != T_FDR)
     {
-       if( Model.which_noise() == NOISE_EVENT_POISSON ) {
-          if( Model.old_poisson() == True ){
-	     Model.CFewEventPoisson2d->find_threshold((Model.TabEps)[s]);
-	     event_set_support(MR_Data, s, Model.Event_Image,  Border, 
-                        Model.CFewEventPoisson2d->_Threshold, Model);
-	  } else {
-	     Model.CFewEvent2d->find_threshold((Model.TabEps)[s]);
-	     event_set_support(MR_Data, s, Model.Event_Image,  Border, 
-                        Model.CFewEvent2d->mThreshold, Model);
+       if( Model.which_noise() == NOISE_EVENT_POISSON ) 
+       {
+          if( Model.old_poisson() == True )
+          {
+	         Model.CFewEventPoisson2d->find_threshold((Model.TabEps)[s]);
+	          event_set_support(MR_Data, s, Model.Event_Image,  Border,  Model.CFewEventPoisson2d->_Threshold, Model);
+          } 
+          else 
+          {
+	        Model.CFewEvent2d->find_threshold((Model.TabEps)[s]);
+	        event_set_support(MR_Data, s, Model.Event_Image,  Border, Model.CFewEvent2d->mThreshold, Model);
           }
        }
     }
@@ -423,11 +661,9 @@ void mr_psupport(MultiResol &MR_Data, MRNoiseModel & Model, type_border Border)
             double P =0;
             if( Model.which_noise() == NOISE_EVENT_POISSON ) {
 	       if( Model.old_poisson() == True )
-                  P = (Model.CFewEventPoisson2d)->a_trou_repartition(
-	                            MR_Data(s,i,j),  EventCount(i,j) , s );
+                  P = (Model.CFewEventPoisson2d)->a_trou_repartition( MR_Data(s,i,j),  (int) (EventCount(i,j)+0.5) , s );
                else
-	          P = (Model.CFewEvent2d)->a_trou_repartition(
-	                            MR_Data(s,i,j),  EventCount(i,j) , s );
+	          P = (Model.CFewEvent2d)->a_trou_repartition( MR_Data(s,i,j),  (int) (EventCount(i,j)+0.5) , s );
             }
              
 	    if (MR_Data(s,i,j) > 0) P = 1. - P;

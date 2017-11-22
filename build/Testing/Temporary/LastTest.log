@@ -1,0 +1,56 @@
+Start testing: Oct 25 11:46 CEST
+----------------------------------------------------------
+1/2 Testing: mr_transform_test
+1/2 Test: mr_transform_test
+Command: "/Users/sfarrens/Dropbox/CEA/P-ISAP/isap/cxx/sparse2d_opt_w_unit/build2/mr_transform_test"
+Directory: /Users/sfarrens/Dropbox/CEA/P-ISAP/isap/cxx/sparse2d_opt_w_unit/build2
+"mr_transform_test" start time: Oct 25 11:46 CEST
+Output:
+----------------------------------------------------------
+===============================================================================
+All tests passed (6 assertions in 2 test cases)
+
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"mr_transform_test" end time: Oct 25 11:46 CEST
+"mr_transform_test" time elapsed: 00:00:00
+----------------------------------------------------------
+
+2/2 Testing: example
+2/2 Test: example
+Command: "/Users/sfarrens/Dropbox/CEA/P-ISAP/isap/cxx/sparse2d_opt_w_unit/build2/example"
+Directory: /Users/sfarrens/Dropbox/CEA/P-ISAP/isap/cxx/sparse2d_opt_w_unit/build2
+"example" start time: Oct 25 11:46 CEST
+Output:
+----------------------------------------------------------
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+example is a Catch v1.9.6 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+Factorials are computed
+-------------------------------------------------------------------------------
+/Users/sfarrens/Dropbox/CEA/P-ISAP/isap/cxx/sparse2d_opt_w_unit/tests/example.cpp:8
+...............................................................................
+
+/Users/sfarrens/Dropbox/CEA/P-ISAP/isap/cxx/sparse2d_opt_w_unit/tests/example.cpp:9: FAILED:
+  REQUIRE( Factorial(0) == 1 )
+with expansion:
+  0 == 1
+
+===============================================================================
+test cases: 1 | 1 failed
+assertions: 1 | 1 failed
+
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Failed.
+"example" end time: Oct 25 11:46 CEST
+"example" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Oct 25 11:46 CEST

@@ -6,17 +6,17 @@
 **
 **    Author: Jean-Luc Starck
 **
-**    Date:  96/05/02 
-**    
+**    Date:  96/05/02
+**
 **    File:  MR_Filtering.cc
 **
 *******************************************************************************
 **
 **    DESCRIPTION  Image filtering using multiresolution
-**    -----------  
-**                 
+**    -----------
 **
-** 
+**
+**
 ******************************************************************************/
 
 #include "IM_Obj.h"
@@ -36,33 +36,33 @@
 void MaxThreshold (Ifloat &Image);
 void bessel_estimate_bayes(float *, int , float, Bool);
 void im_wave_variance(Ifloat &Data, Ifloat &Ima_Variance, int SizeBlock, int Step=1);
-  
-  /********************************************************************/ 
+
+  /********************************************************************/
 /*
 ** Operation
 **      . A = | Plan [i] | / Noise
 **      . If A > 1 then Seuil = 0
-**      . Else 
-**      .      B = | Plan_Next[i] | / Sigma_Next 
+**      . Else
+**      .      B = | Plan_Next[i] | / Sigma_Next
 **      .      If B > 1 Then Coef_B = 0     ** linear
 **      .      Else B = 1. - 1. / N_Sigma * B     ** interpolation
-**      .      Seuil = Noise * B 
+**      .      Seuil = Noise * B
 **
 ** Notes:
-**     When the wavelet coefficient is superior to the noise 
+**     When the wavelet coefficient is superior to the noise
 **   then we don't threshold (Seuil = 0).
 **   In the contrary, we look the next plane and we compute
 **     B = | Plan_Next[i] | / Sigma_Next. t
 **   If B is significant (B > 1), then we don't threshold  (Seuil = 0).
-**   If B is under the statistical significant level 
+**   If B is under the statistical significant level
 **   then we wheigh the thresholding level by the distance of B
 **   from the significant level
 */
-static float hierarchical_thresh(float CoefWave, float CoefNext, 
+static float hierarchical_thresh(float CoefWave, float CoefNext,
                                  float Sigma, float  SigmaNext)
 {
     float Coef_Alpha, Coef_Beta, Seuil;
-     	    
+
     if ((Sigma < FLOAT_EPSILON) || (SigmaNext <  FLOAT_EPSILON))
     {
        Seuil = 0;
@@ -83,7 +83,7 @@ static float hierarchical_thresh(float CoefWave, float CoefNext,
     return Seuil;
 }
 
-/********************************************************************/ 
+/********************************************************************/
 /*
 ** Plan[i] = x1 * Plan[i]
 ** with:
@@ -98,12 +98,12 @@ static float wiener(float CoefWave, float SigmaNoise, float SigmaSignal)
 
     Coef_B2 = pow ((double)(SigmaNoise),2.);
     Coef_S2 = pow ((double)(SigmaSignal),2.) - Coef_B2;
-    if (Coef_S2 < 0) Coef_S2 = 0.; 
+    if (Coef_S2 < 0) Coef_S2 = 0.;
     Coef_Alpha = Coef_S2 / (Coef_B2 + Coef_S2);
     return (CoefWave*Coef_Alpha);
 }
 
-/********************************************************************/ 
+/********************************************************************/
 /*
 ** Hierarchical Wiener Filtering:
 **   Plan[i] = x1 * Plan[i] + x2 * Plan_Next[i]
@@ -126,11 +126,11 @@ static float hierar_wiener(float CoefWave, float CoefNext, float SigmaSignal,
 {
     double Coef_T2,Coef_B2,Coef_S2,Coef_Q2,Coef_x1,Coef_x1_Bis;
     float ValRet=0.;
-    
+
     /* Computes the filtering coefficients */
     Coef_T2 = pow ((double)(SigmaDiff),2.);
     Coef_B2 = pow ((double)(SigmaNoise),2.);
-    Coef_S2 = pow ((double)(SigmaSignal),2.) - Coef_B2; 
+    Coef_S2 = pow ((double)(SigmaSignal),2.) - Coef_B2;
 
     if (Coef_S2 > 0)
     {
@@ -140,10 +140,10 @@ static float hierar_wiener(float CoefWave, float CoefNext, float SigmaSignal,
        ValRet = (float) (Coef_x1 * CoefWave  + Coef_x1_Bis * CoefNext);
     }
     return (ValRet);
-}                                 
+}
 
 
-/********************************************************************/ 
+/********************************************************************/
 
 void MRFiltering::kill_last_scale(MultiResol & MR_Data)
 {
@@ -156,10 +156,10 @@ void MRFiltering::kill_last_scale(MultiResol & MR_Data)
 static void apply_flat_field(Ifloat &Imag, Ifloat Flat)
 {
    for (int i=0; i < Imag.nl(); i++)
-   for (int j=0; j < Imag.nc(); j++)  
+   for (int j=0; j < Imag.nc(); j++)
      if (Flat(i,j) > 0) Imag(i,j) /= Flat(i,j);
 }
- /********************************************************************/ 
+ /********************************************************************/
 
 void MRFiltering::filter(Ifloat &Imag, Ifloat &Result)
 {
@@ -169,50 +169,63 @@ void MRFiltering::filter(Ifloat &Imag, Ifloat &Result)
        cerr << "Error: Noise model not initialized ... " << endl;
        exit(-1);
     }
-   
+
+   // cout << "INPUT FILTER 2" << endl;
+
    int Nl = Imag.nl();
-   int Nc = Imag.nc(); 
-   int NbrPlan =  NoiseModel->nbr_scale(); 
+   int Nc = Imag.nc();
+   int NbrPlan =  NoiseModel->nbr_scale();
    MultiResol MR_Data;
-   MR_Data.alloc(Nl,Nc,NbrPlan,NoiseModel->type_trans(), 
+   MR_Data.alloc(Nl,Nc,NbrPlan,NoiseModel->type_trans(),
                  NoiseModel->filter_bank(), NoiseModel->TypeNorm, NoiseModel->nbr_undec_scale(), NoiseModel->U_Filter);
 
    if ((NoiseModel->type_trans() == TO_DIADIC_MALLAT) && (Filter == FILTER_THRESHOLD))
        NoiseModel->GradientAnalysis = True;
-         
-   if (IsDataModelled == False)  
+
+   //  cout << "IsDataModelled" << endl;
+   if (IsDataModelled == False)
    {
       NoiseModel->model(Imag, MR_Data);
       IsDataModelled = True;
    }
- 
-   if ((Verbose == True)  && (StatNoise  == NOISE_GAUSSIAN))
-                 cout << "SigmaNoise = " <<  NoiseModel->SigmaNoise << endl;
 
-   // if  TransImag = True ==> wavelet coefficient are not those of the 
-   // input image (but the transformed image). We have to transform again the image.       
+  //   cout << "Imodel" << endl;
+
+   if ((Verbose == True)  && (StatNoise  == NOISE_GAUSSIAN))
+                 cout << "SigmaNoise= " <<  NoiseModel->SigmaNoise << endl;
+
+   // if  TransImag = True ==> wavelet coefficient are not those of the
+   // input image (but the transformed image). We have to transform again the image.
    if (NoiseModel->TransImag==True)  NoiseModel->im_transform(Imag);
-                                                 
-   // in this case, WT of image has not yet been computed                                              
+
+   // in this case, WT of image has not yet been computed
    if (IsDataModelled == True)  MR_Data.transform(Imag);
-   
+
    if (BackgroundImage == True)
    {
-      if (NoiseModel->TransImag==True) 
+      if (NoiseModel->TransImag==True)
          NoiseModel->im_transform(BackgroundData);
       Imag -= BackgroundData;
       MR_Data.transform(Imag);
       if (StatNoise  !=  NOISE_EVENT_POISSON)  NoiseModel->set_support(MR_Data);
-      else 
+      else
       {
           mr_psupport(MR_Data, *NoiseModel, MR_Data.Border);
           if (NoiseModel->SupIsol == True) for (int b = 0; b < NbrPlan-2; b++) NoiseModel->kill_isol(b);
       }
    }
-   
+
    switch (Filter)
    {
         case FILTER_ITER_THRESHOLD:
+           if (Verbose == True)
+           {
+               for (int b=0; b < MR_Data.nbr_band()-1; b++)
+               {
+                   float NSig = (NoiseModel->NSigma)[b];
+                   cout << "Band " << b+1 << " Nsig = " << NSig << " Sigma = " <<  NoiseModel->sigma(b,0,0)  << " T  = " <<  NoiseModel->sigma(b,0,0) * NSig  <<  endl;
+               }
+           }
              mr_support_filter(Imag, MR_Data, Result);
              break;
         case FILTER_WAVELET_CONSTRAINT:
@@ -234,14 +247,14 @@ void MRFiltering::filter(Ifloat &Imag, Ifloat &Result)
                     cout << "Band " << b+1 << " Nsig = " << NSig << " Sigma = " <<  NoiseModel->sigma(b,0,0)  << " T  = " <<  NoiseModel->sigma(b,0,0) * NSig  <<  endl;
                  }
               }
-              NoiseModel->threshold(MR_Data); 
+              NoiseModel->threshold(MR_Data);
               if (KillLastScale == True) kill_last_scale(MR_Data);
               MR_Data.recons(Result);
 	      if (UseFlatField == True) apply_flat_field(Result, FlatField);
                // if (MR_Data.Type_Transform != TO_HAAR) MR_Data.recons(Result);
               // else mr_ortho_regul_rec (MR_Data, Result, 10);
               // mr_ortho_regul_ima_rec(MR_Data, Result,10);
- 
+
               break;
         case FILTER_HIERARCHICAL_TRESHOLD:
         case FILTER_HIERARCHICAL_WIENER:
@@ -258,39 +271,39 @@ void MRFiltering::filter(Ifloat &Imag, Ifloat &Result)
  	      for (b=0; b < MR_Data.nbr_band()-1; b++)
               {
  	        int B2 = BlockSize / 2;
-		if (b < MR_Data.nbr_band_per_resol()) 
+		if (b < MR_Data.nbr_band_per_resol())
 		{
 		  B2 = NoiseModel->SizeBlockSigmaNoise/2+1;
 		  BlockSize = 2*B2+1;
 		}
-		else 
+		else
 		{
 		  BlockSize =  NoiseModel->SizeBlockSigmaNoise;
 		  B2 = BlockSize / 2;
 		}
  	        float NSig = 1. + sqrt(2./(BlockSize*BlockSize));
 		double Sigma;
- //  		for (i=0;i < MR_Data.size_band_nl(b); i++) 
-// 		for (j=0;j < MR_Data.size_band_nc(b); j++)   
+ //  		for (i=0;i < MR_Data.size_band_nl(b); i++)
+// 		for (j=0;j < MR_Data.size_band_nc(b); j++)
 // 		{
 // 		   Sigma = 0.;
-// 		   for (int k=i-B2*Step; k <= i+B2*Step; k+=Step) 
-// 		   for (int l=j-B2*Step; l <= j+B2*Step; l+=Step)  
+// 		   for (int k=i-B2*Step; k <= i+B2*Step; k+=Step)
+// 		   for (int l=j-B2*Step; l <= j+B2*Step; l+=Step)
 // 		      Sigma += (MR_Data.band(b))(k,l,I_MIRROR)*(MR_Data.band(b))(k,l,I_MIRROR);
-// 		   Sigma /= (float)(BlockSize*BlockSize); 
+// 		   Sigma /= (float)(BlockSize*BlockSize);
 //                    float NoiseLevel = NoiseModel->sigma(b,i,j)*NoiseModel->sigma(b,i,j);
 // 		   if (Sigma < NSig*NoiseLevel) MR_Data(b,i,j) =0.;
 //   		}
- 		for (i=0;i < MR_Data.size_band_nl(b); i++) 
-		for (j=0;j < MR_Data.size_band_nc(b); j++)   
+ 		for (i=0;i < MR_Data.size_band_nl(b); i++)
+		for (j=0;j < MR_Data.size_band_nc(b); j++)
 		{
 		   if (MR_Data(b,i,j) != 0)
 		   {
 		      Sigma = 0.;
-		      for (int k=i-B2*Step; k <= i+B2*Step; k+=Step) 
-		      for (int l=j-B2*Step; l <= j+B2*Step; l+=Step)  
+		      for (int k=i-B2*Step; k <= i+B2*Step; k+=Step)
+		      for (int l=j-B2*Step; l <= j+B2*Step; l+=Step)
 		         Sigma += (MR_Data.band(b))(k,l,I_MIRROR)*(MR_Data.band(b))(k,l,I_MIRROR);
-		      Sigma /= (float)(BlockSize*BlockSize); 
+		      Sigma /= (float)(BlockSize*BlockSize);
                      float Coef = MR_Data(b,i,j);
                      float NoiseLevel = NoiseModel->sigma(b,i,j)*NoiseModel->sigma(b,i,j);
                      float SigmaSignal = MAX(0, Sigma - NoiseLevel);
@@ -298,7 +311,7 @@ void MRFiltering::filter(Ifloat &Imag, Ifloat &Result)
                      else MR_Data(b,i,j) = 0.;
 		   }
  		}
-		
+
                 // if ((MR_Data.nbr_undec_scale() > b/MR_Data.nbr_band_per_resol()) && ((b+1) % MR_Data.nbr_band_per_resol() == 0)) Step *= 2;
   	    }
 	    if (KillLastScale == True) kill_last_scale(MR_Data);
@@ -312,7 +325,7 @@ void MRFiltering::filter(Ifloat &Imag, Ifloat &Result)
                   float NSig = (NoiseModel->NSigma)[b];
 		   if (Verbose == True)
                      cout << "Band " << b+1 << " Nsig = " << (NoiseModel->NSigma)[b] << " Sigma = " <<  NoiseModel->sigma(b,0,0)  << " T  = " <<  NoiseModel->sigma(b,0,0) * (NoiseModel->NSigma)[b]  <<  endl;
-  		  for (i=0;i < MR_Data.size_band_nl(b); i++) 
+  		  for (i=0;i < MR_Data.size_band_nl(b); i++)
 		  for (j=0;j < MR_Data.size_band_nc(b); j++)
  		       MR_Data(b,i,j)= soft_threshold(MR_Data(b,i,j), NSig*NoiseModel->sigma(b,i,j));
  	       }
@@ -328,7 +341,7 @@ void MRFiltering::filter(Ifloat &Imag, Ifloat &Result)
 		  if (Verbose == True)
 		   cout << "Band " << b+1 << " Nsig = " << (NoiseModel->NSigma)[b] << " MAD sigma = " << NoiseMad << " T = " <<  NoiseLevel <<  endl;
 
-		  for (i=0;i < MR_Data.size_band_nl(b); i++) 
+		  for (i=0;i < MR_Data.size_band_nl(b); i++)
 		  for (j=0;j < MR_Data.size_band_nc(b); j++)
  		      if (ABS(MR_Data(b,i,j)) < NoiseLevel) MR_Data(b,i,j) = 0.;
  	       }
@@ -344,7 +357,7 @@ void MRFiltering::filter(Ifloat &Imag, Ifloat &Result)
 		  if (Verbose == True)
 		   cout << "Band " << b+1 << " Nsig = " << (NoiseModel->NSigma)[b] << " MAD sigma = " << NoiseMad << " T = " <<  NoiseLevel <<  endl;
 
-		  for (i=0;i < MR_Data.size_band_nl(b); i++) 
+		  for (i=0;i < MR_Data.size_band_nl(b); i++)
 		  for (j=0;j < MR_Data.size_band_nc(b); j++)
  		       MR_Data(b,i,j) = soft_threshold(MR_Data(b,i,j),NoiseLevel);
   	       }
@@ -363,15 +376,15 @@ void MRFiltering::filter(Ifloat &Imag, Ifloat &Result)
                 MR_Data.recons(Result);
  	        if (UseFlatField == True) apply_flat_field(Result, FlatField);
                 break;
-         default:           
+         default:
            cerr << "Error: unknown filtering method  ... " << endl;
           exit(-1);
      }
-   
+
    // if the data have been transform, we have to take the inverse transform
    // of the solution
    if (NoiseModel->TransImag == True)
-   { 
+   {
       if (KillLastScale != True)
       {
          NoiseModel->im_invtransform(Imag);
@@ -384,14 +397,14 @@ void MRFiltering::filter(Ifloat &Imag, Ifloat &Result)
           NoiseModel->im_invtransform(Result);
           Result = Imag - Result;
       }
-   }       
-   
+   }
+
    if (BackgroundImage == True) Imag += BackgroundData;
    if (PositivIma == True) threshold(Result);
    if (MaxIma == True) MaxThreshold(Result);
-} 
- 
-/********************************************************************/ 
+}
+
+/********************************************************************/
 /****************************************************************************/
 
 void im_wave_variance(Ifloat &Data, Ifloat &Ima_Variance, int SizeBlock, int Step)
@@ -399,7 +412,7 @@ void im_wave_variance(Ifloat &Data, Ifloat &Ima_Variance, int SizeBlock, int Ste
   int i,j,k,l;
   int Dsize = SizeBlock / 2 * Step;
   float  S0 = SizeBlock*SizeBlock;
- 
+
   for (i=0; i< Data.nl(); i++)
   for (j=0; j< Data.nc(); j++)
   {
@@ -430,7 +443,7 @@ void MRFiltering::hierar_filter(MultiResol & MR_Data, Ifloat &Result)
 //        cerr << "Error: this filtering method need an isotropic transform ... " << endl;
 //        exit(-1);
 //     }
-    
+
     /* Filtering scale by scale */
     int ind=1;
     int Step=1;
@@ -446,11 +459,11 @@ void MRFiltering::hierar_filter(MultiResol & MR_Data, Ifloat &Result)
     {
         Nl = MR_Data.band(s).nl ();
         Nc = MR_Data.band(s).nc ();
-	
+
 	Ima_Variance.resize(Nl,Nc);
         Plan_Next.resize (Nl, Nc);
         im_block_extend(MR_Data.band(s+NbPerRes), Plan_Next);
- 	
+
   	Nsig = NoiseModel->NSigma[s];
         if (Filter == FILTER_HIERARCHICAL_WIENER)
         {
@@ -465,7 +478,7 @@ void MRFiltering::hierar_filter(MultiResol & MR_Data, Ifloat &Result)
 	   im_wave_variance(Plan_Next, Ima_DifVariance, BlockSize, TabStep(s)*2);
 	}
 	im_wave_variance(MR_Data.band(s), Ima_Variance, BlockSize, TabStep(s));
-        
+
         for (i=0;i<Nl;i++)
         for (j=0;j<Nc;j++)
         {
@@ -478,8 +491,8 @@ void MRFiltering::hierar_filter(MultiResol & MR_Data, Ifloat &Result)
            {
              case FILTER_HIERARCHICAL_TRESHOLD:
                  w = linear_weight(Coef, NoiseLevel, Nsig);
-		 SigmaNext = Ima_DifVariance(i,j); 
-                 MR_Data(s,i,j) = w*Coef+(1-w)* hierarchical_thresh(Coef, 
+		 SigmaNext = Ima_DifVariance(i,j);
+                 MR_Data(s,i,j) = w*Coef+(1-w)* hierarchical_thresh(Coef,
                                           Plan_Next(i,j),
 					  NoiseLevel*Nsig,
 					  SigmaNext*NoiseModel->NSigma[s+NbPerRes]);
@@ -487,10 +500,10 @@ void MRFiltering::hierar_filter(MultiResol & MR_Data, Ifloat &Result)
             case FILTER_HIERARCHICAL_WIENER:
 	         SigmaDiff = sqrt(Ima_DifVariance(i,j));
                  // w = linear_weight(Coef, NoiseLevel, Nsig);
-                 // MR_Data(s,i,j) =  w*Coef+(1-w)*hierar_wiener (Coef,  
+                 // MR_Data(s,i,j) =  w*Coef+(1-w)*hierar_wiener (Coef,
                  //                      Plan_Next(i,j), SigmaSignal, SigmaDiff,
                  //                      NoiseLevel);
-		 MR_Data(s,i,j) = hierar_wiener(MR_Data(s,i,j), Plan_Next(i,j), SigmaData, SigmaDiff, NoiseLevel); 
+		 MR_Data(s,i,j) = hierar_wiener(MR_Data(s,i,j), Plan_Next(i,j), SigmaData, SigmaDiff, NoiseLevel);
 		 break;
            case FILTER_BIVARIATE_SHRINKAGE:
  		 SigmaSignal = Ima_Variance(i,j) - NoiseLevel*NoiseLevel;
@@ -510,7 +523,7 @@ void MRFiltering::hierar_filter(MultiResol & MR_Data, Ifloat &Result)
     }
 }
 
-/********************************************************************/ 
+/********************************************************************/
 
 // void MRFiltering::mr_wc_filter (Ifloat &Imag, MultiResol & MR_Data, Ifloat &Result)
 // {
@@ -520,25 +533,25 @@ void MRFiltering::hierar_filter(MultiResol & MR_Data, Ifloat &Result)
 //    float Resi;
 //    float Sigma, Noise_Ima;
 //    float Old_Sigma, Delta;
-//    int NbrPlan =  NoiseModel->nbr_scale(); 
+//    int NbrPlan =  NoiseModel->nbr_scale();
 //    MR_Regul RI;
 //    RI.ExpDecreasingLambda = True;
 //    RI.NbrScale = MR_Data.nbr_scale();
 //    MultiResol MR_Sol;
-//    
-//    MR_Sol.alloc(Nl,Nc,NbrPlan,NoiseModel->type_trans(), 
+//
+//    MR_Sol.alloc(Nl,Nc,NbrPlan,NoiseModel->type_trans(),
 //                  NoiseModel->filter_bank(), NoiseModel->TypeNorm, NoiseModel->nbr_undec_scale());
-// 
-//    MR_Data.transform (Imag, Border); 
+//
+//    MR_Data.transform (Imag, Border);
 //    NoiseModel->threshold(MR_Data);
 //    MR_Data.recons (Result);
-//    
+//
 //    Delta = Sigma = 1.e9;
 //    Noise_Ima=NoiseModel->SigmaNoise;
 //    if (Noise_Ima < FLOAT_EPSILON) Noise_Ima = 1.;
-//   
+//
 //    Sigma = energy(Imag);
-//    Old_Sigma = Sigma; 
+//    Old_Sigma = Sigma;
 //    float SoftThreshold, Lambda = 1.;
 //    float StepL = 1. / (float) Max_Iter;
 //    float DetectCoefTol = 0.5;
@@ -547,16 +560,16 @@ void MRFiltering::hierar_filter(MultiResol & MR_Data, Ifloat &Result)
 //         //cout << "----------------------------------------------------------" << endl;
 // 	//cout << "Iter number " << Iter << endl;
 //         //cout << "Begin loop Sigma="<<Sigma<<", OldSigma="<<Old_Sigma<< endl;
-//         Lambda -= StepL; 
+//         Lambda -= StepL;
 //         if (Lambda < 0) Lambda = 0.;
-//           
-//         MR_Sol.transform (Result, Border); 
+//
+//         MR_Sol.transform (Result, Border);
 // 	for (b=0; b < MR_Data.nbr_band()-1; b++)
 // 	for (i=0; i < MR_Data.size_band_nl(b); i++)
 // 	for (j=0; j < MR_Data.size_band_nc(b); j++)
 // 	{
 //            //float NSig = (NoiseModel->NSigma)[b];
-//  	   float Noise =  (*NoiseModel).sigma(b,i,j);	   
+//  	   float Noise =  (*NoiseModel).sigma(b,i,j);
 // 	   float Interval = Noise * DetectCoefTol;
 //            Resi = MR_Data(b,i,j) - MR_Sol(b,i,j);
 //            SoftThreshold = Lambda*Noise;
@@ -567,7 +580,7 @@ void MRFiltering::hierar_filter(MultiResol & MR_Data, Ifloat &Result)
 // 	         MR_Sol(b,i,j) =  MR_Data(b,i,j);
 // 	      }
 // 	   }
-// 	   else 
+// 	   else
 // 	   {
 // 	      if (MR_Sol(b,i,j) > Interval) MR_Sol(b,i,j) =  Interval;
 // 	      else if (MR_Sol(b,i,j) < -Interval) MR_Sol(b,i,j) = -Interval;
@@ -576,9 +589,9 @@ void MRFiltering::hierar_filter(MultiResol & MR_Data, Ifloat &Result)
 // 	}
 //         b = MR_Data.nbr_band()-1;
 // 	MR_Sol.band(b) = MR_Data.band(b);
-// 	
+//
 //         MR_Sol.recons (Result);
-//         if (RegulParam > 0)      
+//         if (RegulParam > 0)
 // 	{
 // 	   float LambdaTV = RegulParam*Noise_Ima;
 //            RI.im_soft_threshold(Result, Result, LambdaTV);
@@ -586,11 +599,11 @@ void MRFiltering::hierar_filter(MultiResol & MR_Data, Ifloat &Result)
 // 	if ((PositivIma == True) && (NoiseModel->PoissonFisz == False))
 // 	                             threshold(Result);
 //         if (MaxIma == True) MaxThreshold(Result);
-// 
-//         Old_Sigma = Sigma; 
+//
+//         Old_Sigma = Sigma;
 //         Sigma = energy(Result);
 //         Delta = (Old_Sigma - Sigma)  / (Nl*Nc*Noise_Ima*Noise_Ima);
-// 
+//
 //         Iter ++;
 //         float Xi = Sigma / (Nl*Nc*Noise_Ima*Noise_Ima);
 //         if (Verbose == True)
@@ -602,11 +615,11 @@ void MRFiltering::hierar_filter(MultiResol & MR_Data, Ifloat &Result)
 //            else cout << "Iter "<< Iter+1  <<" ==> Delta  = " <<Delta<< endl;
 //         }
 //         if ((Iter >= Max_Iter) || (ABS(Delta) < Epsilon)) break;
-// 	
+//
 //         //cout << "Iter numer " << Iter-1 << endl;
 //         //cout << "End   Loop Sigma="<<Sigma<<", OldSigma="<<Old_Sigma<< endl;
 //         //cout << "Nrj (imag to filter [IN])  = " << energy(Resi) << endl;
-//         //cout << "Nrj (filtered imag  [OUT]) = " << energy(Result) << endl;   	
+//         //cout << "Nrj (filtered imag  [OUT]) = " << energy(Result) << endl;
 //     }
 // }
 
@@ -620,7 +633,7 @@ void MRFiltering::mr_wc_filter (Ifloat &Imag, MultiResol & MR_Data, Ifloat &Resu
    float Old_Sigma, Delta, LambdaTV;
    MR_Regul RI;
    RI.ExpDecreasingLambda = True;
-   
+
 
    Delta = Sigma = 1.e9;
    Noise_Ima=NoiseModel->SigmaNoise;
@@ -635,7 +648,7 @@ void MRFiltering::mr_wc_filter (Ifloat &Imag, MultiResol & MR_Data, Ifloat &Resu
 	   exit(-1);
        }
     }
-       
+
    LambdaTV = RegulParam*Noise_Ima;
    if (Filter == FILTER_TV_CONSTRAINT)
    {
@@ -643,9 +656,9 @@ void MRFiltering::mr_wc_filter (Ifloat &Imag, MultiResol & MR_Data, Ifloat &Resu
       if (RegulParam <= 0) LambdaTV = 0.1*Noise_Ima;
    }
    else RI.NbrScale = MR_Data.nbr_scale();
-    
+
    Sigma = energy(Resi);
-   Old_Sigma = Sigma; 
+   Old_Sigma = Sigma;
    Sup_Set=False;
    MR_Data.ModifiedATWT = True;
    UseAdjointRec = False;
@@ -659,22 +672,22 @@ void MRFiltering::mr_wc_filter (Ifloat &Imag, MultiResol & MR_Data, Ifloat &Resu
       if (PositivIma == True)  cout << "  Positivity " << endl;
       if (NoiseModel->OnlyPositivDetect == True)  cout << "  Detect only positive coeff" << endl;
    }
-   
+
    float SoftThreshold, Lambda = 1.;
-   float StepL = 1. / (float) (Max_Iter);
+   float StepL = RegulParam / (float) (Max_Iter);
    float DetectCoefTol = 1.;
    float MaxFlat = (UseFlatField == False) ? 1: FlatField.max();
    while (True)
    {
-        Lambda -= StepL; 
+        Lambda -= StepL;
         if (Lambda < 0) Lambda = 0.;
         //cout << "----------------------------------------------------------" << endl;
 	//cout << "Iter numer " << Iter << endl;
         //cout << "Begin loop Sigma="<<Sigma<<", OldSigma="<<Old_Sigma<< endl;
         //cout << "Nrj (imag to filter [IN])  = " << energy(Resi) << endl;
-        //cout << "Nrj (filtered imag  [OUT]) = " << energy(Result) << endl;   
-    
-        MR_Data.transform (Resi, Border); 
+        //cout << "Nrj (filtered imag  [OUT]) = " << energy(Result) << endl;
+
+        MR_Data.transform (Resi, Border);
         // NoiseModel->threshold(MR_Data, Sup_Set);
  	for (b=0; b < MR_Data.nbr_band()-1; b++)
 	{
@@ -682,51 +695,51 @@ void MRFiltering::mr_wc_filter (Ifloat &Imag, MultiResol & MR_Data, Ifloat &Resu
 	   for (j=0; j < MR_Data.size_band_nc(b); j++)
 	   {
 	       float Noise = (*NoiseModel).sigma(b,i,j);
-	       float NSig = (*NoiseModel).nsigma(b);	   
+	       float NSig = (*NoiseModel).nsigma(b);
  	       float Interval = Noise*DetectCoefTol;
 	       // if (ABS(MR_Data(b,i,j)) < Interval) MR_Data(b,i,j) = 0;
 	       if (((*NoiseModel)(b,i,j) == False) || (ABS(MR_Data(b,i,j)) < Interval)) MR_Data(b,i,j) = 0;
   	   }
-	}          
- 	   
+	}
+
         if (KillLastScale == True) kill_last_scale(MR_Data);
         if (UseAdjointRec == True) MR_Data.rec_adjoint (Resi);
         else MR_Data.recons (Resi);
-	// INFO(Resi,"resi");
-        if (UseFlatField == False) Result += Resi; 
-	else 
+	// INFO_X(Resi,"resi");
+        if (UseFlatField == False) Result += Resi;
+	else
 	{
 	   for (i=0; i < Resi.nl(); i++)
-	   for (j=0; j < Resi.nc(); j++)  
+	   for (j=0; j < Resi.nc(); j++)
 	   {
 	      float Val =  (ABS(FlatField(i,j)) > 0) ? Resi(i,j) / FlatField(i,j) : 0.;
 	      Result(i,j) += Val;
 	   }
         }
-	
-        if (Lambda*RegulParam> 0)
+
+    if (Lambda*RegulParam> 0)
 	{
-	   MR_Data.transform (Result, Border); 
+	   MR_Data.transform (Result, Border);
   	   for (b=0; b < MR_Data.nbr_band()-1; b++)
 	   {
  	      for (i=0; i < MR_Data.size_band_nl(b); i++)
 	      for (j=0; j < MR_Data.size_band_nc(b); j++)
 	      {
-	         float Noise = (*NoiseModel).sigma(b,i,j) * MaxFlat;	  
+	         float Noise = (*NoiseModel).sigma(b,i,j) * MaxFlat;
  	         float Interval = Noise * (*NoiseModel).nsigma(b);
                  SoftThreshold = Lambda*Noise*RegulParam;
     	         MR_Data(b,i,j) = soft_threshold(MR_Data(b,i,j), SoftThreshold);
 	       // if (((*NoiseModel)(b,i,j) == False) && (MR_Data(b,i,j) > Interval)) MR_Data(b,i,j) = Interval;
 	       // else if (((*NoiseModel)(b,i,j) == False) && (MR_Data(b,i,j) < -Interval)) MR_Data(b,i,j) = -Interval;
  	      }
-	   }          
+	   }
 	   MR_Data.recons(Result);
 	}
 	if ((PositivIma == True) && (NoiseModel->PoissonFisz == False))
 	                             threshold(Result);
         if (MaxIma == True) MaxThreshold(Result);
-        Old_Sigma = Sigma; 
-        if (UseFlatField == False) 
+        Old_Sigma = Sigma;
+        if (UseFlatField == False)
 	{
 	   for (i=0; i < Resi.nl(); i++)
 	   for (j=0; j < Resi.nc(); j++)  Resi(i,j) = Imag(i,j)  - Result(i,j);
@@ -736,7 +749,13 @@ void MRFiltering::mr_wc_filter (Ifloat &Imag, MultiResol & MR_Data, Ifloat &Resu
 	   for (i=0; i < Resi.nl(); i++)
 	   for (j=0; j < Resi.nc(); j++) Resi(i,j) = Imag(i,j)  - Result(i,j)*FlatField(i,j);
 	}
-	
+    if (MissingData == True)
+    {
+        for (i=0; i < Resi.nl(); i++)
+        for (j=0; j < Resi.nc(); j++) Resi(i,j) *=  MaskIma(i,j);
+    }
+
+
         Sigma = energy(Resi);
         Delta = (Old_Sigma - Sigma)  / (Nl*Nc*Noise_Ima*Noise_Ima);
 
@@ -748,15 +767,15 @@ void MRFiltering::mr_wc_filter (Ifloat &Imag, MultiResol & MR_Data, Ifloat &Resu
                (NoiseModel->which_noise() == NOISE_POISSON)) &&
                (KillLastScale == False))
              cout << "Iter "<< Iter+1 << ": Xi = "<< Xi <<" ==> Delta  = " <<Delta<< " Lambda = " << Lambda << endl;
-           else cout << "Iter "<< Iter+1  <<" ==> Delta  = " <<Delta<< endl;
+           else cout << "Iter "<< Iter+1  <<" ==> Delta  = " << Delta <<  ", Lambda = " << Lambda << endl;
         }
         // if ((Iter >= Max_Iter) || (Delta < Epsilon)) break;
 	 if (Iter >= Max_Iter) break;
-	
+
         //cout << "Iter numer " << Iter-1 << endl;
         //cout << "End   Loop Sigma="<<Sigma<<", OldSigma="<<Old_Sigma<< endl;
         //cout << "Nrj (imag to filter [IN])  = " << energy(Resi) << endl;
-        //cout << "Nrj (filtered imag  [OUT]) = " << energy(Result) << endl;   	
+        //cout << "Nrj (filtered imag  [OUT]) = " << energy(Result) << endl;
     }
 }
 
@@ -772,12 +791,17 @@ void MRFiltering::mr_support_filter(Ifloat &Imag, MultiResol & MR_Data, Ifloat &
    float Old_Sigma, Delta, LambdaL1, LambdaTV;
    MR_Regul RI;
    RI.ExpDecreasingLambda = True;
-   
+   Bool InpaintingStopRegul = False;
+   Ifloat BGRIma;
+   Ifloat Ybuff;
 
    Delta = Sigma = 1.e9;
    Noise_Ima=NoiseModel->SigmaNoise;
    if (Noise_Ima < FLOAT_EPSILON) Noise_Ima = 1.;
    Result.init();
+   BGRIma.alloc(Nl, Nc);
+   Ybuff.alloc(Nl, Nc);
+
    if (UseFlatField == True)
    {
        if ((FlatField.nl() != Imag.nl()) || (FlatField.nc() != Imag.nc()))
@@ -787,98 +811,179 @@ void MRFiltering::mr_support_filter(Ifloat &Imag, MultiResol & MR_Data, Ifloat &
        }
     }
    Resi = Imag;
-   
+
    LambdaTV = RegulParam*Noise_Ima;
    if (Filter == FILTER_TV_CONSTRAINT)
    {
       RI.NbrScale = 2;
       if (RegulParam <= 0) LambdaTV = 0.1*Noise_Ima;
    }
-   else 
+   else
    {
       RI.NbrScale = MR_Data.nbr_scale();
-      if (RegulParam == 0.1) LambdaL1 = 0.;  // 0.1 is the default value in mr_filter, and by default no l_1 regul
+      if (RegulParam == 0.1)
+      {
+         LambdaL1 = 0.;  // 0.1 is the default value in mr_filter, and by default no l_1 regul
+      }
       else LambdaL1 = RegulParam;
    }
    Sigma = energy(Resi);
-   Old_Sigma = Sigma; 
-   
+   Old_Sigma = Sigma;
+
    if (Sup_Set == False)
    {
       MR_Data.ModifiedATWT = True;
       UseAdjointRec = False;
    }
-    
+
+    if (MissingData == True)
+    {
+        Sup_Set = False;
+        Border= I_MIRROR;
+    }
+
    if (Verbose == True)
    {
       cout << "  Nbr Max iter = " << Max_Iter<< endl;
       cout << "  Epsilon cvg  = " << Epsilon<< endl;
-      if (RegulParam > 0) cout << "  TV regul param = " << RegulParam<< endl;
+      if (RegulParam > 0) cout << "  Regul param = " << RegulParam<< endl;
       if (UseAdjointRec == True) cout << "  Use Adjoint reconstruction " << endl;
+      if (MR_Data.ModifiedATWT == True) cout << "  Use Second Generation Starlet Transform " << endl;
       if (Sup_Set == True) cout << "  Update the support at each iter" << endl;
       if (PositivIma == True)  cout << "  Positivity " << endl;
       if (NoiseModel->OnlyPositivDetect == True)  cout << "  Detect only positive coeff" << endl;
+      if (MissingData == True) cout << "  Use Inpainting for missing data " << endl;
+      if (Filter == FILTER_TV_CONSTRAINT)cout << "  TV Regularization (Undec Haar ST, 2 scales) : lambda =  " << LambdaTV << endl;
+      else if (LambdaL1 > 0)cout << "  Use Regularizaton, lambda =  " << LambdaL1 << endl;
    }
+
+
 
    while (True)
    {
         //cout << "----------------------------------------------------------" << endl;
-	//cout << "Iter numer " << Iter << endl;
+	    // cout << "Iter numer " << Iter << " " << LambdaL1 << " Noise = " << Noise_Ima << endl;
         //cout << "Begin loop Sigma="<<Sigma<<", OldSigma="<<Old_Sigma<< endl;
         //cout << "Nrj (imag to filter [IN])  = " << energy(Resi) << endl;
-        //cout << "Nrj (filtered imag  [OUT]) = " << energy(Result) << endl;   
-    
-        MR_Data.transform (Resi, Border); 
-        NoiseModel->threshold(MR_Data, Sup_Set);
-        if (KillLastScale == True) kill_last_scale(MR_Data);
-	
+        //cout << "Nrj (filtered imag  [OUT]) = " << energy(Result) << endl;
 
-	       
+        MR_Data.transform (Resi, Border);
+       //  if (KillLastScale == True) kill_last_scale(MR_Data);
+        if ((Iter ==0) && (MissingData == True) && (LambdaL1 == 0))
+        {
+
+            for (b=0; b < MR_Data.nbr_band()-1; b++)
+            for (i=0;i < MR_Data.size_band_nl(b); i++)
+            for (j=0;j < MR_Data.size_band_nc(b); j++)
+            {
+                double R = ABS(MR_Data(b,i,j)) / MR_Data.band_norm(b);
+                if (R > LambdaL1) LambdaL1 = R;
+            }
+            LambdaL1 /= Noise_Ima;
+            RegulParam = LambdaL1;
+        }
+
+       NoiseModel->threshold(MR_Data, Sup_Set);
+       if (KillLastScale == True)
+       {
+           // cout << "OK " <<   MissingData  << " " << KillLastScale << endl;
+           if ((MissingData == True) && (LambdaL1 > 0))
+           {
+               for (b=0; b < MR_Data.nbr_band()-1; b++)
+               {
+                   for (i=0;i < MR_Data.size_band_nl(b); i++)
+                   for (j=0;j < MR_Data.size_band_nc(b); j++)
+                         MR_Data(b,i,j) = soft_threshold(MR_Data(b,i,j), LambdaL1*Noise_Ima*MR_Data.band_norm(b));
+               }
+               LambdaL1 -= RegulParam / (Max_Iter+1.);
+               if (LambdaL1 < 0) LambdaL1  = 0.;
+           }
+           b = MR_Data.nbr_band()-1;
+           for (i=0;i < MR_Data.size_band_nl(b); i++)
+           for (j=0;j < MR_Data.size_band_nc(b); j++)
+           {
+               BGRIma(i,j) += MR_Data(b,i,j);
+               MR_Data(b,i,j) = 0;
+           }
+       }
+
         if (UseAdjointRec == True) MR_Data.rec_adjoint (Resi);
         else MR_Data.recons (Resi);
-	// INFO(Resi,"resi");
-	 
-        if (UseFlatField == False) Result += Resi; 
-	else 
-	{
-	   for (i=0; i < Resi.nl(); i++)
-	   for (j=0; j < Resi.nc(); j++)  
-	   {
-	      float Val =  (ABS(FlatField(i,j)) > 0) ? Resi(i,j) / FlatField(i,j) : 0.;
-	      Result(i,j) += Val;
-	   }
+
+
+
+
+	// INFO_X(Resi,"resi");
+
+        if (UseFlatField == False) Result += Resi;
+	    else
+	    {
+	      for (i=0; i < Resi.nl(); i++)
+	      for (j=0; j < Resi.nc(); j++)
+	      {
+	         float Val =  (ABS(FlatField(i,j)) > 0) ? Resi(i,j) / FlatField(i,j) : 0.;
+	         Result(i,j) += Val;
+	      }
         }
-        
-	if ((RegulParam > 0) && (Filter == FILTER_TV_CONSTRAINT))  RI.im_soft_threshold(Result, Result, LambdaTV);
-        else if (LambdaL1 > 0)
-	{
-	   MR_Data.transform (Result, Border); 
-           for (b=0; b < MR_Data.nbr_band()-1; b++)
-	   {
-              for (i=0;i < MR_Data.size_band_nl(b); i++) 
+
+    	if ((RegulParam > 0) && (Filter == FILTER_TV_CONSTRAINT))  RI.im_soft_threshold(Result, Result, LambdaTV);
+        else if ((LambdaL1 > 0) && (KillLastScale == False))
+	    {
+	        MR_Data.transform (Result, Border);
+            for (b=0; b < MR_Data.nbr_band()-1; b++)
+	        {
+              for (i=0;i < MR_Data.size_band_nl(b); i++)
               for (j=0;j < MR_Data.size_band_nc(b); j++)
-              MR_Data(b,i,j) = soft_threshold(MR_Data(b,i,j), LambdaL1*MR_Data.band_norm(b));
- 	   }
-	   LambdaL1 -= 1. / Max_Iter;
-	   if (LambdaL1 < 0) LambdaL1  = 0.;
-	   MR_Data.recons (Result);
-        }       
-	
- 	if ((PositivIma == True) && (NoiseModel->PoissonFisz == False))  threshold(Result);
+              {
+                 // if (b != MR_Data.nbr_band()-1)
+                 //   NoiseModel->support(b,i,j) = (NoiseModel->signif(MR_Data(b,i,j), b,i,j)) ? VAL_SupOK: VAL_SupNull;
+                  MR_Data(b,i,j) = soft_threshold(MR_Data(b,i,j), LambdaL1*MR_Data.band_norm(b));
+              }
+  	        }
+	        LambdaL1 -= RegulParam / (Max_Iter+1.);
+            if (LambdaL1 < 0) LambdaL1  = 0.;
+ 	        MR_Data.recons (Result);
+        }
+
+
+        if ((PositivIma == True) && (NoiseModel->PoissonFisz == False))  threshold(Result);
         if (MaxIma == True) MaxThreshold(Result);
-	
-        Old_Sigma = Sigma; 
-	if (UseFlatField == False) 
-	{
-	   for (i=0; i < Resi.nl(); i++)
-	   for (j=0; j < Resi.nc(); j++)  Resi(i,j) = Imag(i,j)  - Result(i,j);
-	}
-	else
-	{
-	   for (i=0; i < Resi.nl(); i++)
-	   for (j=0; j < Resi.nc(); j++) Resi(i,j) = Imag(i,j)  - Result(i,j)*FlatField(i,j);
-	}
-	
+
+        Old_Sigma = Sigma;
+    	if (UseFlatField == False)
+	    {
+	       for (i=0; i < Resi.nl(); i++)
+	       for (j=0; j < Resi.nc(); j++)  Resi(i,j) = Imag(i,j)  - Result(i,j) - BGRIma(i,j);
+	    }
+	    else
+	    {
+	       for (i=0; i < Resi.nl(); i++)
+	       for (j=0; j < Resi.nc(); j++) Resi(i,j) = Imag(i,j)  - (Result(i,j) + BGRIma(i,j)) * FlatField(i,j);
+	    }
+        if (MissingData == True)
+        {
+           for (i=0; i < Resi.nl(); i++)
+           for (j=0; j < Resi.nc(); j++) Resi(i,j) *=  MaskIma(i,j);
+        }
+
+
+       if ((MissingData == True) && (LambdaL1 > 0))
+       {
+           for (i=0; i < Resi.nl(); i++)
+           for (j=0; j < Resi.nc(); j++) Ybuff(i,j) = Result(i,j) + BGRIma(i,j) + Resi(i,j);
+           MR_Data.transform (Ybuff, Border);
+           for (b=0; b < MR_Data.nbr_band()-1; b++)
+           {
+               for (i=0;i < MR_Data.size_band_nl(b); i++)
+               for (j=0;j < MR_Data.size_band_nc(b); j++)
+               {
+                  if (((NoiseModel->support)(b,i,j) == VAL_SupOK) && (ABS(MR_Data(b,i,j)) <  (NoiseModel->sigma)(b,i,j) * (NoiseModel->NSigma)[b]))
+                         (NoiseModel->support)(b,i,j) = VAL_SupNull;
+                  // float a=0;
+               }
+           }
+       }
+
         Sigma = energy(Resi);
         Delta = (Old_Sigma - Sigma)  / (Nl*Nc*Noise_Ima*Noise_Ima);
 
@@ -889,10 +994,18 @@ void MRFiltering::mr_support_filter(Ifloat &Imag, MultiResol & MR_Data, Ifloat &
            if (((NoiseModel->which_noise() == NOISE_GAUSSIAN) ||
                (NoiseModel->which_noise() == NOISE_POISSON)) &&
                (KillLastScale == False))
-             cout << "Iter "<< Iter+1 << ": Xi = "<< Xi <<" ==> Delta  = " <<Delta<< endl;
-           else cout << "Iter "<< Iter+1  <<" ==> Delta  = " <<Delta<< " Lambda = " << LambdaL1 << endl;
+             cout << "Iter "<< Iter+1 << ": Xi = "<< Xi <<" ==> Delta  = " << Delta <<  ", Lambda = " << LambdaL1 <<endl;
+           else cout << "Iter "<< Iter+1  <<" ==> Delta  = " <<Delta << " Lambda = " << LambdaL1 << endl;
         }
-        if ((LambdaL1 == 0) && ((Iter >= Max_Iter) || (ABS(Delta) < Epsilon))) break;
+        if (MissingData == False)
+        {
+           if ((LambdaL1 == 0) && ((Iter >= Max_Iter) || (ABS(Delta) < Epsilon))) break;
+        }
+        else
+        {
+            // For inpainting we need 10 more iterations without soft thresholding to avoid the bias
+            if (Iter >= Max_Iter+Max_Inpainting_Iter) break;
+        }
 //         if (Iter > 3)
 //         {
 //            MR_Data.ModifiedATWT = True;
@@ -901,11 +1014,18 @@ void MRFiltering::mr_support_filter(Ifloat &Imag, MultiResol & MR_Data, Ifloat &
         //cout << "Iter numer " << Iter-1 << endl;
         //cout << "End   Loop Sigma="<<Sigma<<", OldSigma="<<Old_Sigma<< endl;
         //cout << "Nrj (imag to filter [IN])  = " << energy(Resi) << endl;
-        //cout << "Nrj (filtered imag  [OUT]) = " << energy(Result) << endl;   	
+        //cout << "Nrj (filtered imag  [OUT]) = " << energy(Result) << endl;
     }
 }
 
-/********************************************************************/ 
+
+//  o = rim('catimage.fits')
+//  mr_filter, o, f4, opt='-v -m 8 -s 2. -F 3 -n 6 -f 3 -K -p -e0  -C2 -A  -i30 -I mask.fits '
+//	mr_filter, o, f0, opt='-m 8 -s 2. -F 3 -n 6 -f 3  -p -v  -K '
+//  mr_filter -m 8 -s 2 -F 3 -n 6 -f 3 -K -C 2 -A -p
+//  mr_filter, o, f, opt='-v -m 10  -s 2. -F 3 -n 6 -f 3 -K -A -p  -I mask.fits'
+
+/********************************************************************/
 
 void MRFiltering::grad_adj_filter(MultiResol &MR_Data, Ifloat &Result)
 {
@@ -913,7 +1033,7 @@ void MRFiltering::grad_adj_filter(MultiResol &MR_Data, Ifloat &Result)
    int Nl =  Result.nl();
    int Nc =  Result.nc();
    Bool UseLastScale = (KillLastScale == True) ? False: True;
- 
+
    Ifloat Resi (Nl, Nc, (char *) "Residual");
    Ifloat Sol0 (Nl, Nc, (char *) "Sol0");
    Ifloat temp (Nl, Nc, (char *) "temp");
@@ -936,10 +1056,10 @@ void MRFiltering::grad_adj_filter(MultiResol &MR_Data, Ifloat &Result)
    {
       if (PositivIma == True)
             temp(i,j) = (Result(i,j) > 0.) ? Result(i,j) : 0.;
-       else temp(i,j) = Result(i,j); 
+       else temp(i,j) = Result(i,j);
        if (MaxIma == True)
 	    temp(i,j) = (Result(i,j) < DEX_MAX_IMA) ? Result(i,j) : DEX_MAX_IMA;
-       else temp(i,j) = Result(i,j);      
+       else temp(i,j) = Result(i,j);
    }
 
    while (True)
@@ -955,16 +1075,16 @@ void MRFiltering::grad_adj_filter(MultiResol &MR_Data, Ifloat &Result)
         num = 0.;
         den = 0.;
         for (i=0; i< Nl; i++)
-        for (j=0; j< Nc; j++) 
+        for (j=0; j< Nc; j++)
         {
             num += Resi(i,j)*temp(i,j);
             den += temp(i,j)*temp(i,j);
         }
         if(!den) w = 1.0;
-        else w = MAX (1.0, num/den); 
+        else w = MAX (1.0, num/den);
 
         for (i=0; i< Nl; i++)
-        for (j=0; j< Nc; j++) 
+        for (j=0; j< Nc; j++)
         {
            Result(i,j) +=  w*Resi(i,j);
            if (PositivIma == True)
@@ -986,7 +1106,7 @@ void MRFiltering::grad_adj_filter(MultiResol &MR_Data, Ifloat &Result)
 }
 
 
-/********************************************************************/ 
+/********************************************************************/
 void MaxThreshold (Ifloat &Image) {
     int i,j;
     for (i = 0; i < Image.nl(); i++)

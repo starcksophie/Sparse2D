@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 2.6)
 include(FindPkgConfig)
+include(ExternalProject)
 
 
 project(sparse2d)
@@ -12,92 +13,149 @@ pkg_check_modules(CFITSIO REQUIRED cfitsio)
 include_directories(${CFITSIO_INCLUDE_DIRS})
 link_directories(${CFITSIO_LIBRARY_DIRS})
 
+set(BIN_DIR  bin)
+if (DEFINED ENV{ISAP})
+set(BIN_DIR  $ENV{ISAP}/bin)
+endif  (DEFINED ENV{ISAP})
+
+
+#
+# Options
+#
+option( USE_FFTW "Use FFTW for Fourier transformation" OFF )
+if(USE_FFTW)
+  ExternalProject_Add( fftw3
+    GIT_REPOSITORY "https://github.com/FFTW/fftw3.git"
+    GIT_TAG "master"
+    SOURCE_DIR "${CMAKE_SOURCE_DIR}/external/fftw3"
+    INSTALL_DIR ""
+    INSTALL_COMMAND ""
+    CONFIGURE_COMMAND echo "Configure FFTW"
+    BUILD_IN_SOURCE 1
+    BUILD_COMMAND "${CMAKE_SOURCE_DIR}/external/fftw.cmd"
+  )
+  set(FFTW_CXX_FLAGS "-DUSE_FFTW")
+  set(FFTW_LD_FLAGS "-L${CMAKE_SOURCE_DIR}/lib -lfftw3f_omp -lfftw3_omp -lfftw3f -lfftw3 -lm")
+else(USE_FFTW)
+  set(FFTW_CXX_FLAGS "")
+  set(FFTW_LD_FLAGS "")
+endif(USE_FFTW)
+
+option( COMPILE_NFFT "Get and compile NFFT" OFF )
+if(COMPILE_NFFT)
+  if(USE_FFTW)
+    set(BUILD_CMD  nfft_fftw.cmd)
+  else(USE_FFTW)
+    set(BUILD_CMD  nfft.cmd)
+  endif(USE_FFTW)
+  ExternalProject_Add( nfft
+    GIT_REPOSITORY "https://github.com/NFFT/nfft.git"
+    GIT_TAG "master"
+    SOURCE_DIR "${CMAKE_SOURCE_DIR}/external/nfft"
+    INSTALL_DIR ""
+    INSTALL_COMMAND ""
+    CONFIGURE_COMMAND echo "Configure NFFT"
+    BUILD_IN_SOURCE 1
+    BUILD_COMMAND "${CMAKE_SOURCE_DIR}/external/${BUILD_CMD}"
+  )
+endif(COMPILE_NFFT)
 
 #
 # Compilation flags
 #
 if(APPLE)
-  set(CMAKE_CXX_FLAGS "-DMACOS -g0 -O2 -ffast-math -fomit-frame-pointer -fopenmp -Wno-write-strings -DNDEBUG")
-#  set(CMAKE_CXX_FLAGS "-DMACOS -g -Wno-write-strings -DNDEBUG")
+  set(CMAKE_CXX_FLAGS "-DMACOS -DNO_DISP_IO -w -g0 -O2 -fomit-frame-pointer -fopenmp -Wno-write-strings -DNDEBUG ${FFTW_FLAGS}")
+#  set(CMAKE_CXX_FLAGS "-DMACOS -g -Wno-write-strings -DNDEBUG ${FFTW_CXX_FLAGS}")
 else(APPLE)
-  set(CMAKE_CXX_FLAGS "-g0 -O2 -ffast-math -fomit-frame-pointer -fopenmp -Wno-write-strings -DNDEBUG")
+ set(CMAKE_CXX_FLAGS_RELEASE "-DNO_DISP_IO -g0 -O2 -fomit-frame-pointer -fopenmp -Wno-write-strings -DNDEBUG ${FFTW_FLAGS}")
+ set(CMAKE_CXX_FLAGS_DEBUG "-DNO_DISP_IO -g -fopenmp -Wno-write-strings ${FFTW_CXX_FLAGS}")
 endif(APPLE)
 
 
 #
+# Build tools library
+#
+FILE(GLOB src_lib1  "${PROJECT_SOURCE_DIR}/src/libtools/*.cc")
+include_directories("${PROJECT_SOURCE_DIR}/src/libtools")
+add_library(tools STATIC ${src_lib1})
+target_link_libraries(tools ${CFITSIO_LIBRARIES} ${FFTW_LD_FLAGS})
+if(USE_FFTW)
+  add_dependencies(tools fftw3)
+endif(USE_FFTW)
+
+#
+# Build sparse1d library
+#
+FILE(GLOB src_lib2  "${PROJECT_SOURCE_DIR}/src/libsparse1d/*.cc")
+include_directories("${PROJECT_SOURCE_DIR}/src/libsparse1d")
+add_library(sparse1d STATIC ${src_lib2})
+target_link_libraries(sparse1d ${CFITSIO_LIBRARIES} ${FFTW_LD_FLAGS})
+if(USE_FFTW)
+  add_dependencies(sparse1d fftw3)
+endif(USE_FFTW)
+
+#
 # Build sparse2d library
 #
-FILE(GLOB src_lib  "${PROJECT_SOURCE_DIR}/src/libsparse2d/*.cc")
+FILE(GLOB src_lib2  "${PROJECT_SOURCE_DIR}/src/libsparse2d/*.cc")
 include_directories("${PROJECT_SOURCE_DIR}/src/libsparse2d")
-add_library(sparse2d STATIC ${src_lib})
-target_link_libraries(sparse2d ${CFITSIO_LIBRARIES})
+add_library(sparse2d STATIC ${src_lib2})
+target_link_libraries(sparse2d ${CFITSIO_LIBRARIES} ${FFTW_LD_FLAGS})
+if(USE_FFTW)
+  add_dependencies(sparse2d fftw3)
+endif(USE_FFTW)
 
+#
+# Build mga2d library
+#
+FILE(GLOB src_mgalib2  "${PROJECT_SOURCE_DIR}/src/libmga2d/*.cc")
+include_directories("${PROJECT_SOURCE_DIR}/src/libmga2d")
+add_library(mga2d STATIC ${src_mgalib2})
+target_link_libraries(mga2d ${CFITSIO_LIBRARIES} ${FFTW_LD_FLAGS})
+if(USE_FFTW)
+  add_dependencies(mga2d fftw3)
+endif(USE_FFTW)
 
 #
 # Compile and link executables
 #
-add_executable(im1d_deconv "${PROJECT_SOURCE_DIR}/src/im1d_deconv.cc")
-target_link_libraries(im1d_deconv sparse2d)
+# set(BINMR2D     mr1d_filter mr1d_trans mr1d_recons mw1d_filter  mr1d_ifilter mr1d_detect mr1d_dct mr1d_deconv)
+set(BINMR2D   mr_transform mr_recons mr_filter mr_deconv mr_info cur_contrast cur_deconv cur_filter cur_stat cur_trans)
 
-add_executable(im_deconv "${PROJECT_SOURCE_DIR}/src/im_deconv.cc")
-target_link_libraries(im_deconv sparse2d)
+# set(BINMR2D im_deconv  mr_abaque  mr_at_edge  mr_background    mr_comp  mr_compare   mr_contrast   mr_decomp  mr_deconv  mr_detect  mr_edge  mr_extract  mr_filter mr_fusion mr_getresol mr_hfilter mr_info mr_insert mr_lcomp mr_mrc mr_pfilter mr_psupport mr_rec_edge mr_recons mr_rfilter mr_segment mr_support mr_transform mr_upresol mr_visu mw_comb_filter mw_deconv mw_entrop mw_filter mw_proba mw_stat  wcomp wdecomp mr_linecol mr_ulc_filter)
 
-add_executable(im_mirror "${PROJECT_SOURCE_DIR}/src/im_mirror.cc")
-target_link_libraries(im_mirror sparse2d)
 
-add_executable(mr1d_filter "${PROJECT_SOURCE_DIR}/src/mr1d_filter.cc")
-target_link_libraries(mr1d_filter sparse2d)
-
-add_executable(mr1d_gmca "${PROJECT_SOURCE_DIR}/src/mr1d_gmca.cc")
-target_link_libraries(mr1d_gmca sparse2d)
-
-add_executable(mr1d_recons "${PROJECT_SOURCE_DIR}/src/mr1d_recons.cc")
-target_link_libraries(mr1d_recons sparse2d)
-
-add_executable(mr1d_trans "${PROJECT_SOURCE_DIR}/src/mr1d_trans.cc")
-target_link_libraries(mr1d_trans sparse2d)
-
-add_executable(mr2d1d_trans "${PROJECT_SOURCE_DIR}/src/mr2d1d_trans.cc")
-target_link_libraries(mr2d1d_trans sparse2d)
-
-add_executable(mr_deconv "${PROJECT_SOURCE_DIR}/src/mr_deconv.cc")
-target_link_libraries(mr_deconv sparse2d)
-
-add_executable(mr_filter "${PROJECT_SOURCE_DIR}/src/mr_filter.cc")
-target_link_libraries(mr_filter sparse2d)
-
-add_executable(mr_gmca "${PROJECT_SOURCE_DIR}/src/mr_gmca.cc")
-target_link_libraries(mr_gmca sparse2d)
-
-add_executable(mr_recons "${PROJECT_SOURCE_DIR}/src/mr_recons.cc")
-target_link_libraries(mr_recons sparse2d)
-
-add_executable(mr_info "${PROJECT_SOURCE_DIR}/src/mr_info.cc")
-target_link_libraries(mr_info sparse2d)
-
-add_executable(mr_sigma "${PROJECT_SOURCE_DIR}/src/mr_sigma.cc")
-target_link_libraries(mr_sigma sparse2d)
-
-add_executable(mr_transform "${PROJECT_SOURCE_DIR}/src/mr_transform.cc")
-target_link_libraries(mr_transform sparse2d)
-
-add_executable(mw_deconv "${PROJECT_SOURCE_DIR}/src/mw_deconv.cc")
-target_link_libraries(mw_deconv sparse2d)
-
+foreach(program ${BINMR2D})
+ add_executable(${program} ${PROJECT_SOURCE_DIR}/src/${program}.cc)
+ target_link_libraries(${program} mga2d sparse2d  sparse1d tools)
+endforeach(program)
 
 #
 # Install (by default in the project directory)
 #
-if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-    set (CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR} CACHE PATH "default install path" FORCE )
-endif()
 
-#install sparse2d headers
+set(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR})
+
+#install sparse1d headers
+FILE(GLOB inc_lib  "${PROJECT_SOURCE_DIR}/src/libsparse1d/*.h")
+INSTALL(FILES ${inc_lib} DESTINATION include)
 FILE(GLOB inc_lib  "${PROJECT_SOURCE_DIR}/src/libsparse2d/*.h")
-INSTALL(FILES ${inc_lib} DESTINATION include/sparse2d)
+INSTALL(FILES ${inc_lib} DESTINATION include)
+FILE(GLOB inc_lib  "${PROJECT_SOURCE_DIR}/src/libmga2d/*.h")
+INSTALL(FILES ${inc_lib} DESTINATION include)
 
-# Install sparse2d library
-INSTALL(TARGETS sparse2d DESTINATION lib)
+# Install library
+INSTALL(TARGETS sparse1d sparse2d mga2d tools DESTINATION lib)
 
-# install sparse2d executables
-INSTALL(TARGETS im1d_deconv im_deconv im_mirror mr1d_filter mr1d_gmca mr1d_recons mr1d_trans mr2d1d_trans mr_deconv mr_filter mr_gmca mr_info mr_recons mr_sigma mr_transform mw_deconv DESTINATION bin)
+# install  executables
+INSTALL(TARGETS ${BINMR2D} DESTINATION ${BIN_DIR})
+
+# UNIT TESTS
+enable_testing()
+set(UNIT_TESTS mr_transform_test example)
+
+foreach(program ${UNIT_TESTS})
+ add_executable(${program} ${PROJECT_SOURCE_DIR}/tests/${program}.cpp)
+ target_link_libraries(${program} mga2d sparse2d  sparse1d tools)
+ add_test(${program} ${program})
+endforeach(program)
