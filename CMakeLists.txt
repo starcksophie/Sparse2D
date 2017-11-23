@@ -15,7 +15,7 @@ link_directories(${CFITSIO_LIBRARY_DIRS})
 
 set(BIN_DIR  bin)
 if (DEFINED ENV{ISAP})
-set(BIN_DIR  $ENV{ISAP}/bin)
+  set(BIN_DIR  $ENV{ISAP}/bin)
 endif  (DEFINED ENV{ISAP})
 
 
@@ -64,13 +64,13 @@ endif(COMPILE_NFFT)
 # Compilation flags
 #
 if(APPLE)
-  set(CMAKE_CXX_FLAGS "-DMACOS -DNO_DISP_IO -w -g0 -O2 -fomit-frame-pointer -fopenmp -Wno-write-strings -DNDEBUG ${FFTW_FLAGS}")
-#  set(CMAKE_CXX_FLAGS "-DMACOS -g -Wno-write-strings -DNDEBUG ${FFTW_CXX_FLAGS}")
+  set(CMAKE_CXX_FLAGS "-DMACOS -DNO_DISP_IO -w -g0 -O2 -fPIC -fomit-frame-pointer -fopenmp -Wno-write-strings -DNDEBUG ${FFTW_FLAGS}")
+  message(STATUS "Using CXX Flags for Mac OSX: " ${CMAKE_SYSTEM})
 else(APPLE)
- set(CMAKE_CXX_FLAGS_RELEASE "-DNO_DISP_IO -g0 -O2 -fomit-frame-pointer -fopenmp -Wno-write-strings -DNDEBUG ${FFTW_FLAGS}")
- set(CMAKE_CXX_FLAGS_DEBUG "-DNO_DISP_IO -g -fopenmp -Wno-write-strings ${FFTW_CXX_FLAGS}")
+  set(CMAKE_CXX_FLAGS_RELEASE "-DNO_DISP_IO -g0 -O2 -fPIC -fomit-frame-pointer -fopenmp -Wno-write-strings -DNDEBUG ${FFTW_FLAGS}")
+  set(CMAKE_CXX_FLAGS_DEBUG "-DNO_DISP_IO -g -fPIC -fopenmp -Wno-write-strings ${FFTW_CXX_FLAGS}")
+  message(STATUS "Using CXX Flags for " ${CMAKE_SYSTEM})
 endif(APPLE)
-
 
 #
 # Build tools library
@@ -119,21 +119,16 @@ endif(USE_FFTW)
 #
 # Compile and link executables
 #
-# set(BINMR2D     mr1d_filter mr1d_trans mr1d_recons mw1d_filter  mr1d_ifilter mr1d_detect mr1d_dct mr1d_deconv)
 set(BINMR2D   mr_transform mr_recons mr_filter mr_deconv mr_info cur_contrast cur_deconv cur_filter cur_stat cur_trans)
 
-# set(BINMR2D im_deconv  mr_abaque  mr_at_edge  mr_background    mr_comp  mr_compare   mr_contrast   mr_decomp  mr_deconv  mr_detect  mr_edge  mr_extract  mr_filter mr_fusion mr_getresol mr_hfilter mr_info mr_insert mr_lcomp mr_mrc mr_pfilter mr_psupport mr_rec_edge mr_recons mr_rfilter mr_segment mr_support mr_transform mr_upresol mr_visu mw_comb_filter mw_deconv mw_entrop mw_filter mw_proba mw_stat  wcomp wdecomp mr_linecol mr_ulc_filter)
-
-
 foreach(program ${BINMR2D})
- add_executable(${program} ${PROJECT_SOURCE_DIR}/src/${program}.cc)
- target_link_libraries(${program} mga2d sparse2d  sparse1d tools)
+  add_executable(${program} ${PROJECT_SOURCE_DIR}/src/${program}.cc)
+  target_link_libraries(${program} mga2d sparse2d  sparse1d tools)
 endforeach(program)
 
 #
 # Install (by default in the project directory)
 #
-
 set(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR})
 
 #install sparse1d headers
@@ -155,7 +150,7 @@ enable_testing()
 set(UNIT_TESTS mr_transform_test example)
 
 foreach(program ${UNIT_TESTS})
- add_executable(${program} ${PROJECT_SOURCE_DIR}/tests/${program}.cpp)
- target_link_libraries(${program} mga2d sparse2d  sparse1d tools)
- add_test(${program} ${program})
+  add_executable(${program} ${PROJECT_SOURCE_DIR}/tests/${program}.cpp)
+  target_link_libraries(${program} mga2d sparse2d  sparse1d tools)
+  add_test(${program} ${program})
 endforeach(program)
