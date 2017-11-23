@@ -1,0 +1,7 @@
+# Ignore build files
+bin/
+build/
+lib/
+
+# Ignore cleaning script
+clean_build.sh
