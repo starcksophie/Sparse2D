@@ -1,1 +1,0 @@
-/usr/local/bin/c++   -DMACOS -DNO_DISP_IO -w -g0 -O2 -fomit-frame-pointer -fopenmp -Wno-write-strings -DNDEBUG  -Wl,-search_paths_first -Wl,-headerpad_max_install_names  CMakeFiles/mr_recons.dir/src/mr_recons.cc.o  -o mr_recons  -L/usr/local/Cellar/cfitsio/3.370/lib  libmga2d.a libsparse2d.a libsparse1d.a libtools.a -lcfitsio -Wl,-rpath,/usr/local/Cellar/cfitsio/3.370/lib 
