@@ -1,5 +1,5 @@
-#! /bin/csh
-set dest_dir=`pwd`
+#! /bin/bash
+dest_dir=`pwd`
 alias libtoolize=$(type -p glibtoolize libtoolize | head -1)
 touch ChangeLog
 rm -rf autom4te.cache

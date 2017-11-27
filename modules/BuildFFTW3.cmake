@@ -16,8 +16,8 @@ if(USE_FFTW)
       )
 
   set(FFTW_CXX_FLAGS "-DUSE_FFTW")
-  set(FFTW_LD_FLAGS "-L ${MODULE_BUILD_DIR}/fftw/lib \
-      -lfftw3f_omp -lfftw3_omp -lfftw3f -lfftw3 -lm")
+  set(FFTW_LD_FLAGS "-L ${MODULE_BUILD_DIR}/fftw/lib -lfftw3f_omp -lfftw3_omp \
+-lfftw3f -lfftw3 -lm")
 
 else(USE_FFTW)
 

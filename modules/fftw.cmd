@@ -1,5 +1,5 @@
-#! /bin/csh
-set dest_dir=`pwd`
+#! /bin/bash
+dest_dir=`pwd`
 touch ChangeLog
 rm -rf autom4te.cache
 autoreconf --verbose --install --symlink --force
