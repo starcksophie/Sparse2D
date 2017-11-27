@@ -2,6 +2,8 @@
 # Compile nFFT #
 #==============#
 
+set(NFFTVersion 3.4.0)
+
 if(COMPILE_NFFT)
 
   if(USE_FFTW)
@@ -11,7 +13,7 @@ if(COMPILE_NFFT)
     endif(USE_FFTW)
 
     ExternalProject_Add(nfft
-      GIT_REPOSITORY    https://github.com/NFFT/nfft.git
+      URL               https://github.com/NFFT/nfft/archive/${NFFTVersion}.tar.gz
       CONFIGURE_COMMAND ""
       BUILD_COMMAND     "${CMAKE_SOURCE_DIR}/modules/${BUILD_CMD}"
       SOURCE_DIR        "${MODULE_BUILD_DIR}/nfft"

@@ -18,7 +18,8 @@ project(sparse2d)
 
   # Set the default installation path
   if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-    set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/sparse2d")
+    set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/sparse2d"
+        CACHE PATH "Setting new default path" FORCE)
   endif()
   message(STATUS "Installing to: ${CMAKE_INSTALL_PREFIX}")
 

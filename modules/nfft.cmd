@@ -1,7 +1,5 @@
 #! /bin/csh
-set current_dir=`pwd`
-set dest_dir=`cd ../..;pwd`
-cd $current_dir
+set dest_dir=`pwd`
 alias libtoolize=$(type -p glibtoolize libtoolize | head -1)
 touch ChangeLog
 rm -rf autom4te.cache
@@ -14,4 +12,3 @@ rm -f config.cache
 make -j8
 make install
 make distclean
-
