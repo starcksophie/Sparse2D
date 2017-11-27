@@ -43,12 +43,11 @@ project(sparse2d)
   if(APPLE)
 
     set(CMAKE_CXX_FLAGS_RELEASE "-DMACOS -DNO_DISP_IO -w -g0 -O2 -fPIC \
-        -fomit-frame-pointer -fopenmp -Wno-write-strings -DNDEBUG \
-        ${FFTW_FLAGS}"
+-fomit-frame-pointer -fopenmp -Wno-write-strings -DNDEBUG ${FFTW_FLAGS}"
     )
 
     set(CMAKE_CXX_FLAGS_DEBUG "-DMACOS -DNO_DISP_IO -w -g0 -fPIC -fopenmp \
-        -Wno-write-strings ${FFTW_CXX_FLAGS}"
+-Wno-write-strings ${FFTW_CXX_FLAGS}"
     )
 
     message(STATUS "Using CXX Flags for Mac OSX: ${CMAKE_SYSTEM}")
@@ -56,12 +55,11 @@ project(sparse2d)
   else(APPLE)
 
     set(CMAKE_CXX_FLAGS_RELEASE "-DNO_DISP_IO -g0 -O2 -fPIC \
-        -fomit-frame-pointer -fopenmp -Wno-write-strings -DNDEBUG \
-        ${FFTW_FLAGS}"
+-fomit-frame-pointer -fopenmp -Wno-write-strings -DNDEBUG ${FFTW_FLAGS}"
     )
 
     set(CMAKE_CXX_FLAGS_DEBUG "-DNO_DISP_IO -g -fPIC -fopenmp \
-        -Wno-write-strings ${FFTW_CXX_FLAGS}"
+-Wno-write-strings ${FFTW_CXX_FLAGS}"
     )
 
     message(STATUS "Using CXX Flags for ${CMAKE_SYSTEM}")
