@@ -122,13 +122,13 @@ project(sparse2d)
 
   # Install headers
   FILE(GLOB inc_lib  "${PROJECT_SOURCE_DIR}/src/libsparse1d/*.h")
-  INSTALL(FILES ${inc_lib} DESTINATION include)
+  INSTALL(FILES ${inc_lib} DESTINATION include/sparse2d)
   FILE(GLOB inc_lib  "${PROJECT_SOURCE_DIR}/src/libsparse2d/*.h")
-  INSTALL(FILES ${inc_lib} DESTINATION include)
+  INSTALL(FILES ${inc_lib} DESTINATION include/sparse2d)
   FILE(GLOB inc_lib  "${PROJECT_SOURCE_DIR}/src/libmga2d/*.h")
-  INSTALL(FILES ${inc_lib} DESTINATION include)
+  INSTALL(FILES ${inc_lib} DESTINATION include/sparse2d)
   FILE(GLOB inc_lib  "${PROJECT_SOURCE_DIR}/src/libtools/*.h")
-  INSTALL(FILES ${inc_lib} DESTINATION include)
+  INSTALL(FILES ${inc_lib} DESTINATION include/sparse2d)
 
   # Install library
   INSTALL(TARGETS sparse1d sparse2d mga2d tools DESTINATION lib)
