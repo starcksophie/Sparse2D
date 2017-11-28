@@ -1,4 +1,5 @@
 # Sparse2D
+[![Build Status](https://travis-ci.org/CosmoStat/Sparse2D.svg?branch=master)](https://travis-ci.org/CosmoStat/Sparse2D)
 
 Sparse2D provides an array of sparsity based tools and a convenient C++ library for performing various wavelet tranforms.
 
