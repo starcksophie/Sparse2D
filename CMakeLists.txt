@@ -25,8 +25,9 @@ project(sparse2d)
 
   # Locate CFITSIO using pkg-config or use command line arguments to configure
   # CFITSIO
-  if(CFITSIO_LIBRARIES STREQUAL "" OR  CFITSIO_LIBRARY_DIRS STREQUAL "" OR
-      CFITSIO_INCLUDE_DIRS STREQUAL "")
+  if(CFITSIO_LIBRARIES STREQUAL "" OR NOT DEFINED CFITSIO_LIBRARIES OR
+     CFITSIO_LIBRARY_DIRS STREQUAL "" OR NOT DEFINED CFITSIO_LIBRARY_DIRS OR
+     CFITSIO_INCLUDE_DIRS STREQUAL "" OR NOT DEFINED CFITSIO_INCLUDE_DIRS)
     pkg_check_modules(CFITSIO REQUIRED cfitsio)
   else()
     message(STATUS "Use manually configured cfitsio")
