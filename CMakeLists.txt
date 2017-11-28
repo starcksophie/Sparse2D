@@ -23,8 +23,17 @@ project(sparse2d)
   endif()
   message(STATUS "Installing to: ${CMAKE_INSTALL_PREFIX}")
 
-  # Locate CFITSIO using pkg-config
-  pkg_check_modules(CFITSIO REQUIRED cfitsio)
+  # Locate CFITSIO using pkg-config or use command line arguments to configure
+  # CFITSIO
+  if(CFITSIO_LIBRARIES STREQUAL "" OR  CFITSIO_LIBRARY_DIRS STREQUAL "" OR
+      CFITSIO_INCLUDE_DIRS STREQUAL "")
+    pkg_check_modules(CFITSIO REQUIRED cfitsio)
+  else()
+    message(STATUS "Use manually configured cfitsio")
+    message(STATUS "  includes: ${CFITSIO_INCLUDE_DIRS}")
+    message(STATUS "  libs: ${CFITSIO_LIBRARY_DIRS}")
+    message(STATUS "  flags: ${CFITSIO_LIBRARIES}")
+  endif()
   include_directories(${CFITSIO_INCLUDE_DIRS})
   link_directories(${CFITSIO_LIBRARY_DIRS})
 
@@ -117,6 +126,8 @@ project(sparse2d)
   FILE(GLOB inc_lib  "${PROJECT_SOURCE_DIR}/src/libsparse2d/*.h")
   INSTALL(FILES ${inc_lib} DESTINATION include)
   FILE(GLOB inc_lib  "${PROJECT_SOURCE_DIR}/src/libmga2d/*.h")
+  INSTALL(FILES ${inc_lib} DESTINATION include)
+  FILE(GLOB inc_lib  "${PROJECT_SOURCE_DIR}/src/libtools/*.h")
   INSTALL(FILES ${inc_lib} DESTINATION include)
 
   # Install library
