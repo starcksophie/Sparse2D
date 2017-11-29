@@ -143,7 +143,7 @@ project(sparse2d)
 
   # Add unit tests
   enable_testing()
-  set(UNIT_TESTS mr_transform_test example)
+  set(UNIT_TESTS mr_transform_test)
 
   foreach(program ${UNIT_TESTS})
     add_executable(${program} ${PROJECT_SOURCE_DIR}/tests/${program}.cpp)
