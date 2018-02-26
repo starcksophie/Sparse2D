@@ -22,6 +22,8 @@ sudo: false
 before_install:
   - sudo apt-get -qq update
   - sudo apt-get install -y libcfitsio3-dev
+  - export CXX=g++-7
+  - export CC=gcc-7
 
 # set up installation
 install:
