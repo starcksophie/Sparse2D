@@ -1,4 +1,6 @@
-language: C++
+# System Set-Up
+language: cpp
+compiler: gcc
 
 # GitHub branch
 branches:

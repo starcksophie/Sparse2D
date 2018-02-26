@@ -103,6 +103,19 @@ project(sparse2d)
     add_dependencies(sparse2d fftw3)
   endif(USE_FFTW)
 
+  option(SPARSE3D "Build Sparse3D library" ON)
+  if(SPARSE3D)
+    # Build sparse3d library
+    FILE(GLOB src_lib2  "${PROJECT_SOURCE_DIR}/src/libsparse3d/*.cc")
+    include_directories("${PROJECT_SOURCE_DIR}/src/libsparse3d")
+    add_library(sparse3d STATIC ${src_lib2})
+    target_link_libraries(sparse3d ${CFITSIO_LIBRARIES} ${FFTW_LD_FLAGS})
+    if(USE_FFTW)
+      add_dependencies(sparse3d fftw3)
+    endif(USE_FFTW)
+  endif(SPARSE3D)
+  message(STATUS "Sparse3D Build: ${SPARSE3D}")
+
   # Build mga2d library
   FILE(GLOB src_mgalib2  "${PROJECT_SOURCE_DIR}/src/libmga2d/*.cc")
   include_directories("${PROJECT_SOURCE_DIR}/src/libmga2d")
@@ -115,10 +128,17 @@ project(sparse2d)
   # Compile and link executables
   set(BINMR2D mr_transform mr_recons mr_filter mr_deconv mr_info cur_contrast
       cur_deconv cur_filter cur_stat cur_trans)
+  if(SPARSE3D)
+    set(BINMR2D ${BINMR2D} mr3d_trans mr3d_filter mr3d_recons mr3d_stat
+        mr2d1d_trans)
+  endif(SPARSE3D)
 
   foreach(program ${BINMR2D})
     add_executable(${program} ${PROJECT_SOURCE_DIR}/src/${program}.cc)
     target_link_libraries(${program} mga2d sparse2d sparse1d tools)
+    if(SPARSE3D)
+      target_link_libraries(${program} mga2d sparse3d sparse2d sparse1d tools)
+    endif(SPARSE3D)
   endforeach(program)
 
   # Install headers
@@ -130,9 +150,16 @@ project(sparse2d)
   INSTALL(FILES ${inc_lib} DESTINATION include/sparse2d)
   FILE(GLOB inc_lib  "${PROJECT_SOURCE_DIR}/src/libtools/*.h")
   INSTALL(FILES ${inc_lib} DESTINATION include/sparse2d)
+  if(SPARSE3D)
+    FILE(GLOB inc_lib  "${PROJECT_SOURCE_DIR}/src/libsparse3d/*.h")
+    INSTALL(FILES ${inc_lib} DESTINATION include/sparse2d)
+  endif(SPARSE3D)
 
   # Install library
   INSTALL(TARGETS sparse1d sparse2d mga2d tools DESTINATION lib)
+  if(SPARSE3D)
+    INSTALL(TARGETS sparse3d DESTINATION lib)
+  endif(SPARSE3D)
 
   # install  executables
   INSTALL(TARGETS ${BINMR2D} DESTINATION bin)
@@ -148,5 +175,8 @@ project(sparse2d)
   foreach(program ${UNIT_TESTS})
     add_executable(${program} ${PROJECT_SOURCE_DIR}/tests/${program}.cpp)
     target_link_libraries(${program} mga2d sparse2d sparse1d tools)
+    if(SPARSE3D)
+      target_link_libraries(${program} mga2d sparse3d sparse2d sparse1d tools)
+    endif(SPARSE3D)
     add_test(${program} ${program})
   endforeach(program)
