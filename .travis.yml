@@ -1,6 +1,15 @@
+# System Set-Up
+dist: trusty
 language: cpp
 compiler: gcc
-dist: trusty
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - gcc-7
+      - g++-7
+      - cmake
 
 # GitHub branch
 branches:
@@ -13,7 +22,6 @@ sudo: false
 before_install:
   - sudo apt-get -qq update
   - sudo apt-get install -y libcfitsio3-dev
-  - sudo apt-get install -qq g++-7
 
 # set up installation
 install:
