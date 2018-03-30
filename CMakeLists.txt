@@ -53,10 +53,10 @@ project(sparse2d)
   if(APPLE)
 
     set(CMAKE_CXX_FLAGS_RELEASE "-DMACOS -DNO_DISP_IO -w -g0 -O2 -fPIC \
--fomit-frame-pointer -fopenmp -Wno-write-strings -DNDEBUG ${FFTW_FLAGS}"
+-fomit-frame-pointer -ffast-math -fopenmp -Wno-write-strings -DNDEBUG ${FFTW_FLAGS}"
     )
 
-    set(CMAKE_CXX_FLAGS_DEBUG "-DMACOS -DNO_DISP_IO -w -g0 -fPIC -fopenmp \
+    set(CMAKE_CXX_FLAGS_DEBUG "-DMACOS -DNO_DISP_IO -w -g0 -fPIC -ffast-math -fopenmp \
 -Wno-write-strings ${FFTW_CXX_FLAGS}"
     )
 
@@ -125,6 +125,14 @@ project(sparse2d)
     add_dependencies(mga2d fftw3)
   endif(USE_FFTW)
 
+  option(BUILD_MSVST "Build MSVST library" OFF)
+  if(BUILD_MSVST)
+    FILE(GLOB msvst_src_lib  "${PROJECT_SOURCE_DIR}/src/libmsvst/*.cc")
+    include_directories("${PROJECT_SOURCE_DIR}/src/libmsvst")
+    add_library(msvst STATIC ${msvst_src_lib} )
+  endif(BUILD_MSVST)
+  message(STATUS "MSVST Build: ${BUILD_MSVST}")
+
   # Compile and link executables
   set(BINMR2D mr_transform mr_recons mr_filter mr_deconv mr_info cur_contrast
       cur_deconv cur_filter cur_stat cur_trans)
@@ -140,6 +148,17 @@ project(sparse2d)
       target_link_libraries(${program} mga2d sparse3d sparse2d sparse1d tools)
     endif(SPARSE3D)
   endforeach(program)
+
+  if(BUILD_MSVST)
+    set(MSVST msvst_uwt2d msvst_iwt2d msvst_2d1d msvst_iwt2d_coupled)
+    foreach(program ${MSVST})
+      add_executable(${program} ${PROJECT_SOURCE_DIR}/src/${program}.cc)
+      target_link_libraries(${program} msvst tools)
+    endforeach(program)
+    FILE(GLOB inc_lib  "${PROJECT_SOURCE_DIR}/src/libmsvst/*.h")
+    INSTALL(FILES ${inc_lib} DESTINATION include/sparse2d)
+    INSTALL(TARGETS ${MSVST} DESTINATION bin)
+  endif(BUILD_MSVST)
 
   # Install headers
   FILE(GLOB inc_lib  "${PROJECT_SOURCE_DIR}/src/libsparse1d/*.h")
