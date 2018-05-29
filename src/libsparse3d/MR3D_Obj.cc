@@ -561,7 +561,7 @@ void MR_3D::alloc (int Npx, int Npy, int Npz, type_trans_3d T, int Nbr_Scale,
         TabPosX = new int [Nbr_Band];
         TabPosY = new int [Nbr_Band];
         TabPosZ = new int [Nbr_Band];
-        AT3D_WT.Verbose=Verbose
+        AT3D_WT.Verbose=Verbose;
         AT3D_WT.alloc(TabBand, Nx, Ny, Nz, Nbr_Plan);
     	for (b =0 ; b < Nbr_Band; b++)
     	{
