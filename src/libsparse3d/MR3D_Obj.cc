@@ -9,24 +9,24 @@
 **    Author: Jean-Luc Starck
 **
 **    Date:  04/09/99
-**    
+**
 **    File:  mr3d_trans.cc
 **
 *******************************************************************************
 **
 **    DESCRIPTION  multiresolution transform of cube
-**    ----------- 
-**                 
+**    -----------
+**
 **    Usage: mr3d_trans options cube output
-**		
+**
 **		Append :
 **			07/2008 : Arnaud Woiselle
 **					undecimated transforms : PAVE_3D_WT
-**		
+**
 ******************************************************************************/
 
 #include "MR3D_Obj.h"
- 
+
 /************************************************************************/
 // 3D sub-band decomposision: an image is transformed into eight sub-cubes
 
@@ -43,11 +43,11 @@ void SubBand3D::transform3d (fltarray &Data)
     float *PtrHigh = new float [Nz];
     float *PtrLow  = new float[Nz];
     float *PtrDet  = new float[Nz];
-       
+
     float *Cube = Data.buffer();
     float *Frame = Cube;
-    
-    // Transform each frame of the cube 
+
+    // Transform each frame of the cube
     for (k=0; k<Nz; k++)
     {
        ImaFrame.alloc(Frame,Ny,Nx);
@@ -55,7 +55,7 @@ void SubBand3D::transform3d (fltarray &Data)
        Frame += Nx*Ny;
        ImaFrame.free();
     }
-   
+
     // each z-vector is convolved by h and g
     for (i = 0; i < Nx; i++)
     for (j = 0; j < Ny; j++)
@@ -65,13 +65,13 @@ void SubBand3D::transform3d (fltarray &Data)
        for (k=0; k< Nz2; k++) Data(i,j,k) = PtrLow[k];
        for (k=0; k< Nz/2; k++) Data(i,j,k+Nz2) = PtrDet[k];
     }
-    
+
     delete [] PtrHigh;
     delete [] PtrLow;
     delete [] PtrDet;
 //	cerr<<"End SubBand3D::transform"<<endl;
 }
-			
+
 /************************************************************************/
 
 void SubBand3D::transform3d(fltarray &Data, fltarray* TabTrans, int Step)
@@ -81,63 +81,63 @@ void SubBand3D::transform3d(fltarray &Data, fltarray* TabTrans, int Step)
 	int Ny = Data.ny();
 	int Nz = Data.nz();
 	SubBand2D SB2D(*Ptr_SB1D);
-	
+
 	// Data
 	Ifloat CubeFrame;
 	float *CubePtr = Data.buffer();
-	
+
 	// 2d transformed version
 	fltarray Horiz(Nx,Ny,Nz);
 	fltarray Vert(Nx,Ny,Nz);
 	fltarray Diag(Nx,Ny,Nz);
 	fltarray Smooth(Nx,Ny,Nz);
-	
+
 	// Pointers associated
 	float *HorizPtr = Horiz.buffer();
 	float *VertPtr = Vert.buffer();
 	float *DiagPtr = Diag.buffer();
 	float *SmoothPtr = Smooth.buffer();
-	
+
 	// virtual Ifloat associated
 	Ifloat HorizFrame;
 	Ifloat VertFrame;
 	Ifloat DiagFrame;
 	Ifloat SmoothFrame;
-	
+
 	int j, i, k;
 	float *PtrHigh = new float[Nz];
 	float *PtrLow  = new float[Nz];
 	float *PtrDet  = new float[Nz];
 
-	// Transform each frame of the cube 
+	// Transform each frame of the cube
 	for (k=0; k<Nz; k++)
 	{
 		HorizFrame.alloc(HorizPtr,Ny,Nx);
 		VertFrame.alloc(VertPtr,Ny,Nx);
 		DiagFrame.alloc(DiagPtr,Ny,Nx);
 		SmoothFrame.alloc(SmoothPtr,Ny,Nx);
-		
+
 		CubeFrame.alloc(CubePtr,Ny,Nx);
 
 		SB2D.transform2d (CubeFrame, HorizFrame, VertFrame, DiagFrame, SmoothFrame, Step);
-		
+
 		CubePtr += Nx*Ny;
 		CubeFrame.free();
-		
+
 		HorizPtr += Nx*Ny;
 		VertPtr += Nx*Ny;
 		DiagPtr += Nx*Ny;
 		SmoothPtr += Nx*Ny;
 	}
-	
+
 	// Smooth => s z
 	// Horiz => x xz
 	// Diag => xy xyz
 	// Vert => y yz
-	// bands : 0   1   2   3   4   5   6   7 
+	// bands : 0   1   2   3   4   5   6   7
 	//  xyz : HHH HHL HLH HLL LHH LHL LLH LLL (high/low)
 	//        DH  DL  HH  HL  VH  VL  SH  SL
-	
+
 	// each z-vector is convolved by h and g
 	for (i = 0; i < Nx; i++)
 	for (j = 0; j < Ny; j++)
@@ -146,7 +146,7 @@ void SubBand3D::transform3d(fltarray &Data, fltarray* TabTrans, int Step)
 		Ptr_SB1D->transform(Nz, PtrHigh, PtrLow, PtrDet, Step);
 		for (k=0; k<Nz; k++) (TabTrans[7])(i,j,k) = PtrLow[k];
 		for (k=0; k<Nz; k++) (TabTrans[6])(i,j,k) = PtrDet[k];
-		
+
 		for (k=0; k<Nz; k++) PtrHigh[k] = Vert(i,j,k);
 		Ptr_SB1D->transform(Nz, PtrHigh, PtrLow, PtrDet, Step);
 		for (k=0; k<Nz; k++) (TabTrans[5])(i,j,k) = PtrLow[k];
@@ -156,7 +156,7 @@ void SubBand3D::transform3d(fltarray &Data, fltarray* TabTrans, int Step)
 		Ptr_SB1D->transform(Nz, PtrHigh, PtrLow, PtrDet, Step);
 		for (k=0; k<Nz; k++) (TabTrans[3])(i,j,k) = PtrLow[k];
 		for (k=0; k<Nz; k++) (TabTrans[2])(i,j,k) = PtrDet[k];
-		
+
 		for (k=0; k<Nz; k++) PtrHigh[k] = Diag(i,j,k);
 		Ptr_SB1D->transform(Nz, PtrHigh, PtrLow, PtrDet, Step);
 		for (k=0; k<Nz; k++) (TabTrans[1])(i,j,k) = PtrLow[k];
@@ -182,7 +182,7 @@ void SubBand3D::recons3d (fltarray &Data)
     float *PtrHigh = new float[Nz];
     float *PtrLow  = new float[Nz];
     float *PtrDet  = new float[Nz];
-       
+
     float *Cube = Data.buffer();
     float *Frame = Cube;
 
@@ -195,8 +195,8 @@ void SubBand3D::recons3d (fltarray &Data)
        Ptr_SB1D->recons(Nz,PtrLow, PtrDet, PtrHigh);
        for (k=0; k<Nz; k++) Data(i,j,k) = PtrHigh[k];
     }
-        
-    // Transform each frame of the cube 
+
+    // Transform each frame of the cube
     for (k=0; k<Nz; k++)
     {
        ImaFrame.alloc(Frame,Ny,Nx);
@@ -204,11 +204,11 @@ void SubBand3D::recons3d (fltarray &Data)
        Frame += Nx*Ny;
        ImaFrame.free();
     }
-   
+
     delete [] PtrHigh;
     delete [] PtrLow;
     delete [] PtrDet;
-}	
+}
 /************************************************************************/
 
 void SubBand3D::recons3d (fltarray* TabTrans, fltarray &Data, int Step)
@@ -218,25 +218,25 @@ void SubBand3D::recons3d (fltarray* TabTrans, fltarray &Data, int Step)
 	int Ny = TabTrans[0].ny();
 	int Nz = TabTrans[0].nz();
 	SubBand2D SB2D(*Ptr_SB1D);
-	
+
 	// 2d transformed version
 	fltarray Horiz(Nx,Ny,Nz);
 	fltarray Vert(Nx,Ny,Nz);
 	fltarray Diag(Nx,Ny,Nz);
 	fltarray Smooth(Nx,Ny,Nz);
-	
+
 	// Pointers associated
 	float *HorizPtr = Horiz.buffer();
 	float *VertPtr = Vert.buffer();
 	float *DiagPtr = Diag.buffer();
 	float *SmoothPtr = Smooth.buffer();
-	
+
 	// virtual Ifloat associated
 	Ifloat HorizFrame;
 	Ifloat VertFrame;
 	Ifloat DiagFrame;
 	Ifloat SmoothFrame;
-	
+
 	int j, i, k;
 	float *PtrHigh = new float[Nz];
 	float *PtrLow  = new float[Nz];
@@ -250,7 +250,7 @@ void SubBand3D::recons3d (fltarray* TabTrans, fltarray &Data, int Step)
 		for (k=0; k<Nz; k++) PtrDet[k] = (TabTrans[6])(i,j,k);
 		Ptr_SB1D->recons(Nz, PtrLow, PtrDet, PtrHigh, Step);
 		for (k=0; k<Nz; k++) Smooth(i,j,k) = PtrHigh[k];
-		
+
 		for (k=0; k<Nz; k++) PtrLow[k] = (TabTrans[5])(i,j,k);
 		for (k=0; k<Nz; k++) PtrDet[k] = (TabTrans[4])(i,j,k);
 		Ptr_SB1D->recons(Nz, PtrLow, PtrDet, PtrHigh, Step);
@@ -260,7 +260,7 @@ void SubBand3D::recons3d (fltarray* TabTrans, fltarray &Data, int Step)
 		for (k=0; k<Nz; k++) PtrDet[k] = (TabTrans[2])(i,j,k);
 		Ptr_SB1D->recons(Nz, PtrLow, PtrDet, PtrHigh, Step);
 		for (k=0; k<Nz; k++) Horiz(i,j,k) = PtrHigh[k];
-		
+
 		for (k=0; k<Nz; k++) PtrLow[k] = (TabTrans[1])(i,j,k);
 		for (k=0; k<Nz; k++) PtrDet[k] = (TabTrans[0])(i,j,k);
 		Ptr_SB1D->recons(Nz, PtrLow, PtrDet, PtrHigh, Step);
@@ -272,22 +272,22 @@ void SubBand3D::recons3d (fltarray* TabTrans, fltarray &Data, int Step)
 	Data.init(0);
 	Ifloat CubeFrame;
 	float *CubePtr = Data.buffer();
-	
-	
+
+
 	for (k=0; k<Nz; k++)
 	{
 		HorizFrame.alloc(HorizPtr,Ny,Nx);
 		VertFrame.alloc(VertPtr,Ny,Nx);
 		DiagFrame.alloc(DiagPtr,Ny,Nx);
 		SmoothFrame.alloc(SmoothPtr,Ny,Nx);
-		
+
 		CubeFrame.alloc(CubePtr,Ny,Nx);
 
 		SB2D.recons2d (HorizFrame, VertFrame, DiagFrame, SmoothFrame, CubeFrame, Step);
 
 		CubePtr += Nx*Ny;
 		CubeFrame.free();
-		
+
 		HorizPtr += Nx*Ny;
 		VertPtr += Nx*Ny;
 		DiagPtr += Nx*Ny;
@@ -298,12 +298,12 @@ void SubBand3D::recons3d (fltarray* TabTrans, fltarray &Data, int Step)
     delete [] PtrLow;
     delete [] PtrDet;
 //	cerr<<"End SubBand3D::recons3d_redondant"<<endl;
-}	
+}
 
 
 //****************************************************************************
 //            Ortho_3D_WT OBJ : Orthogonal decimated 3D wavelet transform
-//**************************************************************************** 
+//****************************************************************************
 
 void Ortho_3D_WT::transform (fltarray  &Cube, fltarray &Cube_Out, int NbrScale)
 {
@@ -320,25 +320,25 @@ void Ortho_3D_WT::transform (fltarray &Data, int NbrScale)
    int Nx = Data.nx();
    int Ny = Data.ny();
    int Nz = Data.nz();
-    
-   // Apply a first transform on the cube itself  
+
+   // Apply a first transform on the cube itself
    // it allows to save memory for the Data_Aux size
    transform3d (Data);
 
    Nx = (Nx+1)/2;
    Ny = (Ny+1)/2;
    Nz = (Nz+1)/2;
- 
+
    for (s = 0; s < NbrScale-2; s++)
    {
        fltarray Data_Aux(Nx,Ny,Nz);
        for (i = 0; i < Nx; i++)
        for (j = 0; j < Ny; j++)
        for (k = 0; k < Nz; k++) Data_Aux(i,j,k) = Data(i,j,k);
-          
+
        // transform Data_Aux
        transform3d (Data_Aux);
-       
+
        for (i = 0; i < Nx; i++)
        for (j = 0; j < Ny; j++)
        for (k = 0; k < Nz; k++) Data(i,j,k) = Data_Aux(i,j,k);
@@ -350,31 +350,31 @@ void Ortho_3D_WT::transform (fltarray &Data, int NbrScale)
 
 /************************************************************************/
 
-void Ortho_3D_WT::recons (fltarray &Transf_in, fltarray &Cube_out, int Nbr_Plan) 
+void Ortho_3D_WT::recons (fltarray &Transf_in, fltarray &Cube_out, int Nbr_Plan)
 {
    Cube_out = Transf_in;
    recons(Cube_out, Nbr_Plan);
-   
+
 }
 
 /************************************************************************/
 
-void Ortho_3D_WT::recons (fltarray &Data, int Nbr_Plan) 
+void Ortho_3D_WT::recons (fltarray &Data, int Nbr_Plan)
 {
    int i,j,k,s;
    int Nx = Data.nx();
    int Ny = Data.ny();
    int Nz = Data.nz();
-   
+
     /* last scale size */
    int  Nx_2, Ny_2, Nz_2, Nxs, Nys, Nzs;
- 
+
    for (s = Nbr_Plan-2; s >= 0; s--)
    {
         Nxs = size_resol(s, Nx);
         Nys = size_resol(s, Ny);
         Nzs = size_resol(s, Nz);
-	
+
         Nx_2 = (Nxs+1)/2;
         Ny_2 = (Nys+1)/2;
 	Nz_2 = (Nzs+1)/2;
@@ -384,19 +384,19 @@ void Ortho_3D_WT::recons (fltarray &Data, int Nbr_Plan)
         for (i = 0; i < Nxs; i++)
         for (j = 0; j < Nys; j++)
 	for (k = 0; k < Nzs; k++) Data_Aux(i,j,k) = Data(i,j,k);
-       	
+
 	// inverse transform Ima_Aux
         recons3d(Data_Aux);
 
         for (i = 0; i < Nxs; i++)
         for (j = 0; j < Nys; j++)
-	for (k = 0; k < Nzs; k++) Data(i,j,k) = Data_Aux(i,j,k);         
+	for (k = 0; k < Nzs; k++) Data(i,j,k) = Data_Aux(i,j,k);
    }
-    
+
 }
 
 /************************************************************************/
-//            PAVE_3D_WT OBJ 
+//            PAVE_3D_WT OBJ
 /****************************************************************************/
 
 int PAVE_3D_WT::alloc (fltarray * & TabBand, int Nx, int Ny, int Nz, int NbrScale)
@@ -458,10 +458,10 @@ void PAVE_3D_WT::recons (fltarray *TabTrans, fltarray &Cube, int NbrScale)
 
 
 /************************************************************************/
-//            3D MR OBJ 
+//            3D MR OBJ
 /****************************************************************************/
 
-float & MR_3D::operator() (int b, int i, int j, int k) const 
+float & MR_3D::operator() (int b, int i, int j, int k) const
 {
    if ((b < 0) || (b >= nbr_band())
        || (i < 0) || (i >= size_band_nx(b))
@@ -474,18 +474,18 @@ float & MR_3D::operator() (int b, int i, int j, int k) const
       cout << "       Y pos = " << j  << " Ny = " <<  size_band_ny(b) << endl;
       cout << "       Z pos = " << k  << " Nz = " <<  size_band_nz(b) << endl;
       exit(-1);
-   }       
+   }
    if (Set_Transform == TRANS3_PAVE)
    {
       return TabBand[b](i,j,k);
    }
    else
-   {    
+   {
    int Indi = TabPosX[b] + i;
    int Indj = TabPosY[b] + j;
    int Indk = TabPosZ[b] + k;
-   
-   if ((Indi < 0) || (Indi >= Nx) || 
+
+   if ((Indi < 0) || (Indi >= Nx) ||
        (Indj < 0) || (Indj >= Ny) || (Indk < 0) || (Indk >= Nz))
    {
       cout << "Error: band coefficient index ... " << endl;
@@ -494,7 +494,7 @@ float & MR_3D::operator() (int b, int i, int j, int k) const
       cout << "       Indj = " << Indj  << " Ny = " <<  Ny << endl;
       cout << "       Indk = " << Indk  << " Nz = " <<  Nz << endl;
       exit(-1);
-   }   
+   }
    return Data(Indi,Indj,Indk);
    }
 }
@@ -505,7 +505,7 @@ float & MR_3D::operator() (int b, int i, int j, int k) const
 void set_size_band(int N, Bool FilterLow, int & P, int &Ns)
 {
    int L = (N+1)/2;
-    
+
    if (FilterLow == True)
    {
       Ns = L;
@@ -515,7 +515,7 @@ void set_size_band(int N, Bool FilterLow, int & P, int &Ns)
    {
       Ns = N/2;
       P = L;
-   }   
+   }
 }
 
 /****************************************************************************/
@@ -549,34 +549,35 @@ void MR_3D::alloc (int Npx, int Npy, int Npz, type_trans_3d T, int Nbr_Scale,
     Nbr_Plan = Nbr_Scale;
     Type_Transform = T;
     Set_Transform = SetTransform (T);
-    Border = DEFAULT_BORDER_3D;   
-    
+    Border = DEFAULT_BORDER_3D;
+
     DataFormat = IO_3D_Format;
     if (Set_Transform == TRANS3_PAVE)
     {
         Nbr_Band = Nbr_Plan;
-	TabSizeNx = new int [Nbr_Band];
+        TabSizeNx = new int [Nbr_Band];
         TabSizeNy = new int [Nbr_Band];
         TabSizeNz = new int [Nbr_Band];
         TabPosX = new int [Nbr_Band];
         TabPosY = new int [Nbr_Band];
         TabPosZ = new int [Nbr_Band];
-	AT3D_WT.alloc(TabBand, Nx, Ny, Nz, Nbr_Plan);
-	for (b =0 ; b < Nbr_Band; b++)
-	{
-	   TabSizeNx[b] = Nx;
-	   TabSizeNy[b] = Ny;
-	   TabSizeNz[b] = Nz;
-	   TabPosX[b] = 0;
-	   TabPosY[b] = 0;
-	   TabPosZ[b] = 0;
-	}
+        AT3D_WT.Verbose=Verbose
+        AT3D_WT.alloc(TabBand, Nx, Ny, Nz, Nbr_Plan);
+    	for (b =0 ; b < Nbr_Band; b++)
+    	{
+    	   TabSizeNx[b] = Nx;
+    	   TabSizeNy[b] = Ny;
+    	   TabSizeNz[b] = Nz;
+    	   TabPosX[b] = 0;
+    	   TabPosY[b] = 0;
+    	   TabPosZ[b] = 0;
+    	}
     }
     else
     {
     FilterBank = FAS;
     if (FAS != NULL) SBFilter = FAS->type_filter();
-    else if (T == TO3_MALLAT)   
+    else if (T == TO3_MALLAT)
     {
         if (FilterBank == NULL)
         {
@@ -588,7 +589,7 @@ void MR_3D::alloc (int Npx, int Npy, int Npz, type_trans_3d T, int Nbr_Scale,
         }
     }
     TypeNorm = Norm;
-   
+
     // LiftingTrans = DEF_LIFT;
     // SB_Filter = F_MALLAT_7_9;
     // Norm = NORM_L1;
@@ -599,107 +600,107 @@ void MR_3D::alloc (int Npx, int Npy, int Npz, type_trans_3d T, int Nbr_Scale,
     TabPosX = new int [Nbr_Band];
     TabPosY = new int [Nbr_Band];
     TabPosZ = new int [Nbr_Band];
-         
-    Data.alloc (Nx,Ny,Nz);        
+
+    Data.alloc (Nx,Ny,Nz);
     TabBand = &Data;
-    if (Set_Transform == TRANS3_MALLAT)  
+    if (Set_Transform == TRANS3_MALLAT)
     {
       int Lx = Nx;
       int Ly = Ny;
       int Lz = Nz;
-      
+
       for (s=0; s < Nbr_Plan-1; s++)
       {
          int Ns,P;
-	  
+
  	 // Horizontal low
 	 b = 7*s;
 	 set_size_band(Lx, False, P, Ns);
-         TabPosX[b] = P;    
+         TabPosX[b] = P;
          TabSizeNx[b] = Ns;
 	 set_size_band(Ly, True, P, Ns);
-         TabPosY[b] = P;    
+         TabPosY[b] = P;
          TabSizeNy[b] = Ns;
 	 set_size_band(Lz, True, P, Ns);
-         TabPosZ[b] = P;    
+         TabPosZ[b] = P;
          TabSizeNz[b] = Ns;
-	 
+
          // Vertical low
 	 b = 7*s+1;
 	 set_size_band(Lx, True, P, Ns);
-         TabPosX[b] = P;    
+         TabPosX[b] = P;
          TabSizeNx[b] = Ns;
 	 set_size_band(Ly, False, P, Ns);
-         TabPosY[b] = P;    
+         TabPosY[b] = P;
          TabSizeNy[b] = Ns;
 	 set_size_band(Lz, True, P, Ns);
-         TabPosZ[b] = P;    
-         TabSizeNz[b] = Ns; 
-	 
+         TabPosZ[b] = P;
+         TabSizeNz[b] = Ns;
+
          // Diagonal low
 	 b = 7*s+2;
 	 set_size_band(Lx, False, P, Ns);
-         TabPosX[b] = P;    
+         TabPosX[b] = P;
          TabSizeNx[b] = Ns;
 	 set_size_band(Ly, False, P, Ns);
-         TabPosY[b] = P;    
+         TabPosY[b] = P;
          TabSizeNy[b] = Ns;
 	 set_size_band(Lz, True, P, Ns);
-         TabPosZ[b] = P;    
-         TabSizeNz[b] = Ns; 	 
+         TabPosZ[b] = P;
+         TabSizeNz[b] = Ns;
 
 	 // Horizontal High
 	 b = 7*s+3;
 	 set_size_band(Lx, False, P, Ns);
-         TabPosX[b] = P;    
+         TabPosX[b] = P;
          TabSizeNx[b] = Ns;
 	 set_size_band(Ly, True, P, Ns);
-         TabPosY[b] = P;    
+         TabPosY[b] = P;
          TabSizeNy[b] = Ns;
 	 set_size_band(Lz, False, P, Ns);
-         TabPosZ[b] = P;    
+         TabPosZ[b] = P;
          TabSizeNz[b] = Ns;
-	 
+
          // Vertical high
 	 b = 7*s+4;
 	 set_size_band(Lx, True, P, Ns);
-         TabPosX[b] = P;    
+         TabPosX[b] = P;
          TabSizeNx[b] = Ns;
 	 set_size_band(Ly, False, P, Ns);
-         TabPosY[b] = P;    
+         TabPosY[b] = P;
          TabSizeNy[b] = Ns;
 	 set_size_band(Lz, False, P, Ns);
-         TabPosZ[b] = P;    
-         TabSizeNz[b] = Ns; 
-	 
+         TabPosZ[b] = P;
+         TabSizeNz[b] = Ns;
+
          // Diagonal high
 	 b = 7*s+5;
 	 set_size_band(Lx, False, P, Ns);
-         TabPosX[b] = P;    
+         TabPosX[b] = P;
          TabSizeNx[b] = Ns;
 	 set_size_band(Ly, False, P, Ns);
-         TabPosY[b] = P;    
+         TabPosY[b] = P;
          TabSizeNy[b] = Ns;
 	 set_size_band(Lz, False, P, Ns);
-         TabPosZ[b] = P;    
-         TabSizeNz[b] = Ns; 	 
+         TabPosZ[b] = P;
+         TabSizeNz[b] = Ns;
 
          // z-high, and x,y low
 	 b = 7*s+6;
 	 set_size_band(Lx, True, P, Ns);
-         TabPosX[b] = P;    
+         TabPosX[b] = P;
          TabSizeNx[b] = Ns;
 	 set_size_band(Ly, True, P, Ns);
-         TabPosY[b] = P;    
+         TabPosY[b] = P;
          TabSizeNy[b] = Ns;
 	 set_size_band(Lz, False, P, Ns);
-         TabPosZ[b] = P;    
+         TabPosZ[b] = P;
          TabSizeNz[b] = Ns;
 
          Lx = (Lx+1) / 2;
 	 Ly = (Ly+1) / 2;
 	 Lz = (Lz+1) / 2;
-      } 
+      }
       b = Nbr_Band-1;
       TabPosX[b] = 0;
       TabPosY[b] = 0;
@@ -707,16 +708,16 @@ void MR_3D::alloc (int Npx, int Npy, int Npz, type_trans_3d T, int Nbr_Scale,
       TabSizeNx[b] = Lx;
       TabSizeNy[b] = Ly;
       TabSizeNz[b] = Lz;
-      
+
    }}
 }
- 
+
 /****************************************************************************/
 
 void MR_3D::info_pos_band()
 {
    int s;
-   
+
    switch (Set_Transform)
    {
      case TRANS3_MALLAT:
@@ -726,8 +727,8 @@ void MR_3D::info_pos_band()
        cout << "Band " << s+1;
        cout <<  " Pos = [" << TabPosX[s] << "," << TabPosY[s] << "," <<  TabPosZ[s] << "]";
        cout <<  " Size = [" << TabSizeNx[s] << "," << TabSizeNy[s] << "," << TabSizeNz[s] << "]";
-       cout <<  " Band = [" << TabPosX[s] << ":" << TabPosX[s]+TabSizeNx[s]-1 << "," << 
-	                          TabPosY[s] << ":" << TabPosY[s]+TabSizeNy[s]-1 << "," <<  
+       cout <<  " Band = [" << TabPosX[s] << ":" << TabPosX[s]+TabSizeNx[s]-1 << "," <<
+	                          TabPosY[s] << ":" << TabPosY[s]+TabSizeNy[s]-1 << "," <<
 				  TabPosZ[s] << ":" << TabPosZ[s]+TabSizeNz[s]-1 << "]" << endl;
        }
        break;
@@ -752,9 +753,9 @@ void MR_3D::get_band(int b, fltarray &Band)
    int Nxb = size_band_nx(b);
    int Nyb = size_band_ny(b);
    int Nzb = size_band_nz(b);
-   
+
    if (Band.n_elem() == 0) Band.alloc(Nxb,Nyb,Nzb);
-   else if ((Band.naxis() != 3) || (Band.nx() != Nxb) 
+   else if ((Band.naxis() != 3) || (Band.nx() != Nxb)
              || (Band.ny() != Nyb) || (Band.nz() != Nzb))
    {
       Band.free();
@@ -773,11 +774,13 @@ void MR_3D::insert_band(int b, fltarray &Band)
    int Nxb = size_band_nx(b);
    int Nyb = size_band_ny(b);
    int Nzb = size_band_nz(b);
-   
-   if ((Band.n_elem() == 0) || (Band.naxis() != 3) 
-       || (Band.nx() != Nxb) 
+
+
+   if ((Band.n_elem() == 0) || (Band.naxis() != 3)
+       || (Band.nx() != Nxb)
        || (Band.ny() != Nyb) || (Band.nz() != Nzb))
    {
+      cerr << Band.n_elem() << ":" << Band.naxis() << ":" << Band.nx() << ":" << Nxb << ":" << Band.ny() << ":" << Nyb << ":" << Band.nz() << ":" << Nzb << endl;
       cerr << "Error: band to insert has not the correct dimensions ... " << endl;
       exit(-1);
    }
@@ -799,7 +802,7 @@ void MR_3D::info_band(int b)
    int Nyb = size_band_ny(b);
    int Nzb = size_band_nz(b);
    long Np = Nxb*Nyb*Nzb;
-   
+
    for (i=0; i < Nxb; i++)
    for (j=0; j < Nyb; j++)
    for (k=0; k < Nzb; k++)
@@ -822,12 +825,12 @@ void MR_3D::info_band(int b)
    cout << "Band " << b+1 << endl;
    cout <<  " Pos = [" << TabPosX[b] << "," << TabPosY[b] << "," <<  TabPosZ[b] << "]";
    cout <<  " Size = [" << Nxb << "," << Nyb << "," << Nzb << "]";
-   cout <<  " Band = [" << TabPosX[b] << ":" << TabPosX[b]+Nxb-1 << "," << 
-	                    TabPosY[b] << ":" << TabPosY[b]+Nyb-1 << "," <<  
-		            TabPosZ[b] << ":" << TabPosZ[b]+Nzb-1 << "]" << endl;   
+   cout <<  " Band = [" << TabPosX[b] << ":" << TabPosX[b]+Nxb-1 << "," <<
+	                    TabPosY[b] << ":" << TabPosY[b]+Nyb-1 << "," <<
+		            TabPosZ[b] << ":" << TabPosZ[b]+Nzb-1 << "]" << endl;
    cout << "  Min   = " << Min <<  " Max = " << Max << endl;
    cout << "  Mean  = " << Mean << " Flux = " << Flux << endl;
-   cout << "  Sigma = " <<  Sigma << endl << endl; 
+   cout << "  Sigma = " <<  Sigma << endl << endl;
 }
 
 
@@ -865,8 +868,8 @@ void MR_3D::free ()
     if (TabPosY != NULL)  delete [] TabPosY;
     if (TabSizeNy != NULL) delete [] TabSizeNy;
     if (TabPosZ != NULL)  delete [] TabPosZ;
-    if (TabSizeNz != NULL) delete [] TabSizeNz;    
-    if ((FilterBankAlloc == True) && (FilterBank != NULL)) 
+    if (TabSizeNz != NULL) delete [] TabSizeNz;
+    if ((FilterBankAlloc == True) && (FilterBank != NULL))
     {
         delete FilterBank;
         FilterBank = NULL;
@@ -905,12 +908,12 @@ void MR_3D::transform (fltarray &Cube, type_border Bord)
           Ortho_3D_WT WT3D(Clift1D);
           WT3D.transform(Data, Nbr_Plan);
          }
-         break; 
+         break;
        default:
            fprintf (stderr, "Error (proc. MR_3D_transform): Unknown transform\n");
            exit (-1);
            break;
-    }    
+    }
 }
 
 /****************************************************************************/
@@ -951,12 +954,12 @@ void MR_3D::recons (fltarray &Cube, type_border Bord)
           Ortho_3D_WT WT3D(Clift1D);
           WT3D.recons(Cube, Nbr_Plan);
          }
-         break; 
+         break;
        default:
            fprintf (stderr, "Error (proc. MR_3D_transform): Unknown transform\n");
            exit (-1);
            break;
-    }     
+    }
 }
 
 /****************************************************************************/
@@ -984,7 +987,7 @@ static void PrintError( int status)
     /*****************************************************/
 
     char status_str[FLEN_STATUS], errmsg[FLEN_ERRMSG];
-  
+
     if (status)
       fprintf(stderr, "\n*** Error occurred during program execution ***\n");
 
@@ -1013,39 +1016,39 @@ int MR_3D::mr_io_fill_header(fitsfile *fptr)
     /*****************************************************/
 
 
-// if ( ffpkyj(fptr, "Nx", (long)Nx,"x-axis size",&status)) PrintError( status );  
-// if ( ffpkyj(fptr,"Ny",(long)Ny,"y-axis size",&status)) PrintError( status );  
-// if ( ffpkyj(fptr,"Nz",(long)Nz,"z-axis size",&status)) PrintError( status ); 
+// if ( ffpkyj(fptr, "Nx", (long)Nx,"x-axis size",&status)) PrintError( status );
+// if ( ffpkyj(fptr,"Ny",(long)Ny,"y-axis size",&status)) PrintError( status );
+// if ( ffpkyj(fptr,"Nz",(long)Nz,"z-axis size",&status)) PrintError( status );
  if ( ffpkyj(fptr, (char*)"Nbr_Plan", (long)Nbr_Plan, (char*)"Number of scales", &status))
-     PrintError( status );  
+     PrintError( status );
  if (ffpkyj(fptr, (char*)"Set_Transform", (long)Set_Transform,
                       StringSet3D(Set_Transform), &status))
-      PrintError( status );  
- if ( ffpkyj(fptr, (char*)"Type_Transform", (long)Type_Transform, 
+      PrintError( status );
+ if ( ffpkyj(fptr, (char*)"Type_Transform", (long)Type_Transform,
                          StringTransf3D(Type_Transform), &status))
-     PrintError( status );  
+     PrintError( status );
 
  if (Type_Transform  == TO3_MALLAT)
  {
   if ( ffpkyj(fptr, (char*)"SBFilter", (long) SBFilter, (char*)"Type of filters", &status))
-        PrintError( status );  
+        PrintError( status );
      if ( ffpkyj(fptr, (char*)"NORM", (long)  TypeNorm, (char*)"normalization", &status))
-        PrintError( status );  
+        PrintError( status );
   // if ( ffpkyj(fptr, "UNDEC", (long) NbrUndec , "nbr of undec. scales", &status))
-  //      PrintError( status ); 
-  }	
-       
- 
+  //      PrintError( status );
+  }
+
+
   if (Type_Transform  == TO3_LIFTING)
-  if ( ffpkyj(fptr, (char*)"LiftingTrans", (long)  LiftingTrans, 
+  if ( ffpkyj(fptr, (char*)"LiftingTrans", (long)  LiftingTrans,
                            (char*)StringLSTransform(LiftingTrans), &status))
         PrintError( status );
-     
+
  if ( ffpkyj(fptr, (char*)"DataFormat",(long) DataFormat,(char*)"Input data format", &status))
-     PrintError( status );  
+     PrintError( status );
 
  if ( ffpkyj(fptr, (char*)"Border",(long)Border,(char*)"border type", &status))
-     PrintError( status );  
+     PrintError( status );
 
  if (SBFilter == F_USER)
  {
@@ -1057,9 +1060,9 @@ int MR_3D::mr_io_fill_header(fitsfile *fptr)
    else if ( ffpkys(fptr, (char*)"FilBank", (char*)"-" ,(char*)"Filter", &status))
           PrintError( status );
  }
-     
+
  return(status);
-} 
+}
 
 
 /****************************************************************************/
@@ -1069,7 +1072,7 @@ void MR_3D::write (char *Name)
 {
  char filename[256];
  Ifloat Ima;
- fitsfile *fptr;    
+ fitsfile *fptr;
  int status;
  // float *Ptr;
  int b,simple;
@@ -1080,11 +1083,11 @@ void MR_3D::write (char *Name)
  long group = 1;  /* group to write in the fits file, 1= first group */
  long firstpixel = 1;    /* first pixel to write (begin with 1) */
  Ifloat Aux;
- 
+
 /* we keep mr as extension even if its fits ! */
  mr3d_io_name (Name, filename);
 
-#if DEGUG_IO  
+#if DEGUG_IO
     cout << "Write on " << filename << endl;
 #endif
 
@@ -1100,7 +1103,7 @@ void MR_3D::write (char *Name)
     /* open the file */
  if ( ffinit(&fptr, filename, &status) )     /* create the new FITS file */
      PrintError( status );           /* call PrintError if error occurs */
-                                                                              
+
 /* write  the header */
  simple   = True;
  bitpix   =  -32;   /* 32-bit real pixel values      */
@@ -1125,13 +1128,13 @@ void MR_3D::write (char *Name)
      default:
          fprintf (stderr, "Error in mr_io_write: bad Set_Transform ... \n");
          exit(-1);
-         break; 
+         break;
      }
- 
+
  // write first header part (parameters)
  if ( ffphpr(fptr,simple,bitpix,naxis,naxes,pcount,gcount,extend,&status) )
      PrintError( status );          /* call PrintError if error occurs */
-    
+
  // write the header of the multiresolution file
  status = mr_io_fill_header(fptr);
 
@@ -1143,15 +1146,15 @@ void MR_3D::write (char *Name)
      case TRANS3_MALLAT:
              // this works because everything is put in one image
          nelements = naxes[0] * naxes[1] * naxes[2];
-         if ( ffppre(fptr, group, firstpixel, nelements, Data.buffer(), 
+         if ( ffppre(fptr, group, firstpixel, nelements, Data.buffer(),
                &status) )
-              PrintError( status );  
+              PrintError( status );
          break;
      case TRANS3_PAVE:
          nelements = naxes[0] * naxes[1] * naxes[2];
          for (b=0; b < Nbr_Plan; b++)
 	 {
-	   if ( ffppre(fptr, group, firstpixel, nelements, (TabBand[b]).buffer(), 
+	   if ( ffppre(fptr, group, firstpixel, nelements, (TabBand[b]).buffer(),
                &status) )
               PrintError( status );
 	    firstpixel += nelements;
@@ -1159,11 +1162,11 @@ void MR_3D::write (char *Name)
 	 break;
      default:
          fprintf (stderr, "Error in mr_io_write: bad Type_Transform ..\n\n");
-         break; 
+         break;
      }
 
  /* close the FITS file */
- if ( ffclos(fptr, &status) )  PrintError(status);  
+ if ( ffclos(fptr, &status) )  PrintError(status);
 // cout << " end of write fits " << endl;
 
 }
@@ -1188,24 +1191,24 @@ void MR_3D::read (char *Name)
     long nelements = 0 ; // naxes[0] * naxes[1] in the image
     Ifloat Ima;
     long firstpixel = 1;
-    
+
      // for multiresol
     float *Ptr;
- 
+
      mr3d_io_name (Name, filename);
 
     inc[0]=1;  inc[1]=1; inc[2]=1;
- 
+
 #if DEBUG_IO
     cout << "Read in " << filename << endl;
 #endif
-   
+
     /* open the file */
     status = 0;         /* initialize status before calling fitsio routines */
-    if ( ffopen(&fptr, filename, (int) READONLY, &status) ) 
+    if ( ffopen(&fptr, filename, (int) READONLY, &status) )
          PrintError( status );
  // cout << " open the file " << endl;
-                                   
+
     // ******* read the HEADER  *******
 
     hdunum = 1;  /*read  table */
@@ -1224,52 +1227,52 @@ void MR_3D::read (char *Name)
     //if (ffgkyj(fptr,"Nx", &mon_long, comment, &status)) PrintError( status );
     //int Nxi = (int)mon_long; /* there is no function for reading int */
     //if (ffgkyj(fptr,"Ny", &mon_long, comment, &status)) PrintError( status );
-    //int Nyi = (int)mon_long; 
+    //int Nyi = (int)mon_long;
     //if (ffgkyj(fptr,"Nz", &mon_long, comment, &status)) PrintError( status );
     //int Nzi = (int)mon_long;
     int Nxi = (int)naxes[0];
     int Nyi = (int)naxes[1];
     int Nzi = (int)naxes[2];
-    
+
     if (ffgkyj(fptr,(char*)"Nbr_Plan", &mon_long, comment, &status)) PrintError( status );
-    int NbrPlan = (int)mon_long; 
-    
+    int NbrPlan = (int)mon_long;
+
     type_trans_3d  TT;
-    if (ffgkyj(fptr,(char*)"Type_Transform", &mon_long, comment, &status)) 
+    if (ffgkyj(fptr,(char*)"Type_Transform", &mon_long, comment, &status))
                     PrintError( status );
     else TT = (type_trans_3d) mon_long;
-		    
+
     FilterAnaSynt *PtrFAS = NULL;
     if (TT == TO3_MALLAT)
     {
         if (ffgkyj(fptr,(char*)"SBFilter", &mon_long, comment, &status)) SBFilter = DEF_SB_FILTER;
         else SBFilter = (type_sb_filter) mon_long;
-	
+
 	if (ffgkyj(fptr,(char*)"NORM", &mon_long, comment, &status)) TypeNorm = DEF_SB_NORM;
         else  TypeNorm = (sb_type_norm) mon_long;
 
       // if (ffgkyj(fptr,"UNDEC", &mon_long, comment, &status))  NbrUndecimatedScale = -1;
       // else NU = (int) mon_long;
- 
+
       if (SBFilter == F_USER)
       {
           char FBName[256];
           if (ffgkys(fptr,(char*)"FilBank", FBName, comment, &status))
                                                       PrintError( status );
-          if (FBName[0] == '-') UserFilterFileName = NULL; 
+          if (FBName[0] == '-') UserFilterFileName = NULL;
           else UserFilterFileName = strdup(FBName);
       }
-    
+
        PtrFAS = new FilterAnaSynt;
        PtrFAS->Verbose = Verbose;
        PtrFAS->alloc(SBFilter);
        FilterBankAlloc=True;
     }
-    alloc(Nxi,Nyi,Nzi, TT, NbrPlan, PtrFAS, TypeNorm);   
-     	
+    alloc(Nxi,Nyi,Nzi, TT, NbrPlan, PtrFAS, TypeNorm);
+
     if (Type_Transform  == TO3_LIFTING)
     {
-         if (ffgkyj(fptr,(char*)"LiftingTrans", &mon_long, comment, &status)) 
+         if (ffgkyj(fptr,(char*)"LiftingTrans", &mon_long, comment, &status))
               LiftingTrans = DEF_LIFT;
  	 else LiftingTrans = (type_lift) mon_long;
     }
@@ -1280,10 +1283,10 @@ void MR_3D::read (char *Name)
 
     if (ffgkyj(fptr,(char*)"Border", &mon_long, comment, &status))
          PrintError( status );
-    Border = (type_border)mon_long; 
+    Border = (type_border)mon_long;
 
-    
-#if DEBUG_IO 
+
+#if DEBUG_IO
     cout << "Read in " << filename << endl;
     cout << "Nx = " << Nx << endl;
     cout << "Ny = " << Ny << endl;
@@ -1303,7 +1306,7 @@ void MR_3D::read (char *Name)
     fpixels[1] = 1;
     fpixels[2] = 1;
     lpixels[0] = Nx;
-    lpixels[1] = Ny;    
+    lpixels[1] = Ny;
     lpixels[2] = Nz;
 
     switch (Set_Transform)
@@ -1322,17 +1325,15 @@ void MR_3D::read (char *Name)
               PrintError( status );
 	    firstpixel += nelements;
 	 }
-	 break;        
+	 break;
    default:
           fprintf (stderr, "Error in mr_io_read: bad Set_Transform .. \n");
-          break; 
+          break;
     }
- 
+
 /* close the FITS file */
  if ( ffclos(fptr, &status) ) PrintError( status );
 // cout << " end of read fits file " << endl;
 }
 
 /****************************************************************************/
-
-
