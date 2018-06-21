@@ -8,16 +8,16 @@
 **
 **    Author: Jean-Luc Starck
 **
-**    Date:  15/10/01 
-**    
+**    Date:  15/10/01
+**
 **    File:  ATrou3D.h
 **
 *******************************************************************************
 **
 **    DESCRIPTION  3D wavelet transform using the a trous algorithm
-**    -----------  
-**                 
-**    
+**    -----------
+**
+**
 ******************************************************************************/
 
 #ifndef _Atrou3D_H_
@@ -31,7 +31,7 @@
 /************************************************************************/
 
 class ATROUS_3D_WT {
-	
+
 private:
 	int _Nx;
 	int _Ny;
@@ -48,18 +48,19 @@ public:
 
 	Bool ModifiedAWT; // kept public for old functions, use set_use_modAWT(bool) instead
 	Bool Adjoint; // kept public for old functions, use set_use_modAWT(bool) instead
+    Bool Verbose;
 	
 	type_border Bord; // Type of border
 
 	// get a pixel value, taking into account the border.
 	float get_pix(fltarray & Cube, int x, int y, int z)
-		{return (Cube(index(x,Cube.nx()), index(y,Cube.ny()), index(z,Cube.nz())));} 
+		{return (Cube(index(x,Cube.nx()), index(y,Cube.ny()), index(z,Cube.nz())));}
 
-	// allocate the memory space 	for a wavelet transform 
+	// allocate the memory space 	for a wavelet transform
 	void alloc(fltarray * & TabBand,int Nx,int Ny,int Nz, int NbrBand)
-	{ 
+	{
 		TabBand = new fltarray [NbrBand];
-		for (int s = 0; s < NbrBand; s++) TabBand[s].alloc (Nx, Ny, Nz); 
+		for (int s = 0; s < NbrBand; s++) TabBand[s].alloc (Nx, Ny, Nz);
 	}
 
 	// deallocate a wavelet transform.
@@ -74,12 +75,12 @@ public:
 	void transform(fltarray & CubeIn, fltarray * & TabBandOut, int Nbr_Plan);
 
 	// 3D wavelet reconstruction
-	// Nbr_Plan==0 means it's already saved in the transform 
+	// Nbr_Plan==0 means it's already saved in the transform
 	void recons(fltarray * & TabBandIn, fltarray & CubeOut, int Nbr_Plan=0,
 			Bool AddLastScale=True);
 
 	void set_no_fine(bool nf) {no_fine=nf;}
-	
+
 	// added functions for mr3d_atrou
 	dblarray TabStat;
 	void set_use_modAWT(bool ad=true) {ModifiedAWT=(Bool)ad;}

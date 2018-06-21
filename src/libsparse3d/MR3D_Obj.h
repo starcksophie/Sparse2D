@@ -10,14 +10,14 @@
 **    Author: J.L. Starck
 **
 **    Date:  19.8.99
-**    
+**
 **    File:  MR3D_Obj.h
 **
 *******************************************************************************
 **
 **    DESCRIPTION  Class for 3D wavelet transform
-**    ----------- 
-**                 
+**    -----------
+**
 ******************************************************************************/
 
 #ifndef _CMR3D_H_
@@ -28,7 +28,7 @@
 #include "SB_Filter.h"
 #include "IM3D_IO.h"
 #include "Atrou3D.h"
-#include "MR3D_Obj.h"
+#include "MR_Obj.h"
 
 #define NBR_TRANS_3D 3
 #define DEFAULT_BORDER_3D I_MIRROR
@@ -45,10 +45,10 @@ inline char * StringTransf3D (type_trans_3d type)
                return ((char*)"(bi-) orthogonal transform ");break;
                break;
         case TO3_LIFTING:
-              return ((char*)"(bi-) orthogonal transform via lifting sheme"); 
+              return ((char*)"(bi-) orthogonal transform via lifting sheme");
               break;
 	case TO3_ATROUS:
-	      return ((char*)"A trous wavelet transform"); 
+	      return ((char*)"A trous wavelet transform");
               break;
         case T3_UNDEFINED:
               return ((char*)"undefined transform");break;
@@ -61,10 +61,10 @@ inline char * StringSet3D (set_trans_3d type)
     switch (type)
     {
          case TRANS3_MALLAT:
-              return ((char*)"non-redundant"); 
+              return ((char*)"non-redundant");
               break;
 	case TRANS3_PAVE:
-              return ((char*)"redundant"); 
+              return ((char*)"redundant");
               break;
         case  S3_UNDEFINED:
               return ((char*)"undefined type transform");break;
@@ -85,7 +85,7 @@ inline set_trans_3d which_set_is_trans3d(type_trans_3d type)
               return S3_UNDEFINED;break;
     }
     return S3_UNDEFINED;
-} 
+}
 
 inline set_trans_3d SetTransform (type_trans_3d Transform)
 {
@@ -168,7 +168,7 @@ class MR_3D {
 		FilterAnaSynt *FilterBank; // pointer to the filter bank to use
                         		// in the orthogonal wavelet transform
 		Bool FilterBankAlloc;      // True if the filter bank is allocated
-                        		// by the class   
+                        		// by the class
 		void init();
    public:
 		Bool Verbose;
@@ -176,19 +176,19 @@ class MR_3D {
 		set_trans_3d  Set_Transform;  // class of transform
 		type_border Border;           // type of border to user for the
                         		   // border intrpolation
-		type_sb_filter SBFilter;       // Filter used in the subband 
-	                    		// decomposition (case of Mallat transform).             
+		type_sb_filter SBFilter;       // Filter used in the subband
+	                    		// decomposition (case of Mallat transform).
 		sb_type_norm TypeNorm;         // type of normalization
 	                    		// (in L1 or L2)
 		type_lift LiftingTrans;        // type of lifting (in case of lifting
-	                    		// transform					
+	                    		// transform
 
 		// return a pointer to the filter bank
 		FilterAnaSynt * filter_bank() {return FilterBank;}
 
 		MR_3D (){init();}
 		MR_3D (int Nx, int Ny, int Nz, type_trans_3d T, int Nbr_Scale)
-	    		   { alloc(Nx,Ny,Nz,T,Nbr_Scale);}
+	    		   {init(); alloc(Nx,Ny,Nz,T,Nbr_Scale);}
 
 		inline int nbr_scale () const {return Nbr_Plan;}
 		inline int nbr_band () const {return Nbr_Band;}
