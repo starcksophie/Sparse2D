@@ -849,14 +849,27 @@ void MR_3D::free ()
     Border = DEFAULT_BORDER_3D;
     switch (Set_Transform)
     {
-     case TRANS3_MALLAT:
-         Data.free();
+    case TRANS3_MALLAT:
+        Data.free();
         break;
-     case  TRANS3_PAVE:
-         AT3D_WT.free(TabBand, Nbr_Plan);
-       break;
-     default: cerr << "Error: bad transform ... " << endl;
-              exit(-1);
+    case TRANS3_PAVE:
+        AT3D_WT.free(TabBand, Nbr_Plan);
+        break;
+    case S3_UNDEFINED:
+        // We set those attrributes to NULL because these should be instantiated
+        // in the init().
+        TabPosX = NULL;
+        TabSizeNx = NULL;
+        TabPosY = NULL;
+        TabSizeNy = NULL;
+        TabPosZ = NULL;
+        TabSizeNz = NULL;
+        FilterBank = NULL;
+        break;
+
+    default: cerr << "Error: bad transform ... " << endl;
+        exit(-1);
+
     }
     Nbr_Plan = 0;
     Nbr_Band = 0;
