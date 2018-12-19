@@ -18,7 +18,7 @@ The following softwares are required:
 Please use a package management tool to properly install cfistio and the other dependencies. On linux you can use apt (Ubuntu).
 On Mac OSX we recommend homebrew, the command "brew install cfitsio" will install the cfitsio package.
 
-### Compilation
+### Building from Source
 
 To configure the sparse2d toolbox for your machine type:
 
@@ -53,10 +53,31 @@ Sparse2D can also be built using [FFTW3](http://www.fftw.org/) and/or
 ```
 
 Finally, if you wish to build using a compiler other than the default on your
-system (*e.g.* gcc on Mac OSX) you can do so as follows:
+system (*e.g.* gcc on macOS) you can do so as follows:
 
 ```bash
   $ CC=gcc CXX=g++ cmake ..
+```
+
+### macOS
+
+Sparse2D can be built on macOS using [Homebrew](https://brew.sh/). Before doing so, you should make sure you have a C compiler that supports OpenMP (note that the native clang does not) and cmake. These requirements can also be installed with Homebrew as follows
+
+```bash
+  $ brew install gcc cmake
+```
+
+Once these packages have been installed, Sparse2D can be installed with
+
+```bash
+  $ brew tap cosmostat/science
+  $ brew install sparse2d
+```
+
+By default this package builds with Homebrew gcc, however you can also build with an alternative compiler as follows
+
+```bash
+  $ brew install sparse2d --cc=COMPILER
 ```
 
 ## Usage
