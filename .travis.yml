@@ -1,18 +1,29 @@
 # System Set-Up
 language: cpp
-compiler: gcc
 
-# GitHub branch
-branches:
-  only:
-  - master
-
-sudo: false
+matrix:
+  include:
+    - os: linux
+    - os: osx
+      osx_image: xcode10.1
+      env:
+        - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
 
 # install dependencies
+addons:
+  apt:
+    packages:
+      - cmake
+      - libcfitsio3-dev
+  homebrew:
+    packages:
+      - gcc@7
+      - cmake
+      - pkgconfig
+      - cfitsio
+
 before_install:
-  - sudo apt-get -qq update
-  - sudo apt-get install -y libcfitsio3-dev
+  - eval "${MATRIX_EVAL}"
 
 # set up installation
 install:
