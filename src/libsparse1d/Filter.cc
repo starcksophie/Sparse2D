@@ -84,8 +84,8 @@ static float   AntoniniAnalysis[] =  {  3.782845550699535e-02,
 			     -2.384946501937986e-02,
 			      3.782845550699535e-02 };
 			      
-const float  SQRT2 = sqrt(2.);
-static float HaarCoeffs [3] = {1./SQRT2, 1./SQRT2, 0};
+const float  SQRT2 = sqrt(2.0f);
+static float HaarCoeffs [3] = {1.0f/SQRT2, 1.0f/SQRT2, 0.0f};
 
 static float Daub4Coeffs [7] = {0,0,0,
                                  0.4829629131445341,  
