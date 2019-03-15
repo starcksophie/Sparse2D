@@ -50,7 +50,7 @@ static float Prewittr[3][3] = { {1,0,-1}, {1,0,-1}, {1,0,-1}};
 static float Prewittc[3][3] = { {-1,-1,-1}, {0,0,0}, {1,1,1}};
 #define NORM_PREWITT 1./3.
 
-#define S2 sqrt(2.)
+#define S2 sqrt(2.0f)
 static float FreiChenr[3][3] = { {1,0,-1}, {S2,0,-S2}, {1,0,-1}};
 static float FreiChenc[3][3] = { {-1,-S2,-1}, {0,0,0}, {1,S2,1}};
 #define NORM_FREICHEN 1./(2+S2)
