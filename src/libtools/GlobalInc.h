@@ -23,16 +23,6 @@ typedef std::complex<double> complex_d;
 
 // #include<climits>
 
-#ifndef WINDOWS
-#ifndef OSF1
-#ifndef HP
-#ifndef MACOS
-#include <values.h>
-#endif
-#endif
-#endif
-#endif
-
 extern "C"
 {
 #include "fitsio2.h"
