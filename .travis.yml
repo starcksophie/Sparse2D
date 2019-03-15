@@ -17,6 +17,7 @@ matrix:
   include:
     - os: linux
     - os: osx
+      name: "macOS with GCC"
       osx_image: xcode10.1
       env:
         - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
@@ -26,6 +27,7 @@ matrix:
             - gcc@7
             - *macos_packages
     - os: osx
+      name: "macOS with vanilla Clang"
       osx_image: xcode10.1
       env:
         - MATRIX_EVAL="CC=/usr/local/opt/llvm/bin/clang && CXX=/usr/local/opt/llvm/bin/clang++"
@@ -33,6 +35,14 @@ matrix:
         homebrew:
           packages:
             - llvm
+            - libomp
+            - *macos_packages
+    - os: osx
+      name: "macOS with AppleClang"
+      osx_image: xcode10.1
+      addons:
+        homebrew:
+          packages:
             - libomp
             - *macos_packages
 
