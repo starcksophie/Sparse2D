@@ -25,9 +25,11 @@ project(sparse2d)
 
   # Find OpenMP
   if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
-    set(OpenMP_CXX_FLAGS "-fopenmp")
+    set(OpenMP_INCLUDE_PATH "/usr/local/include")
+    set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp -lomp\
+    -I${OpenMP_INCLUDE_PATH}")
     set(OpenMP_CXX_LIB_NAMES "omp")
-    set(OpenMP_CXX_LIBRARIES "/usr/local/opt/libomp/lib/libomp.dylib")
+    set(OpenMP_CXX_LIBRARIES "/usr/local/lib/libomp.dylib")
   else()
     find_package(OpenMP REQUIRED)
   endif()
@@ -62,16 +64,18 @@ project(sparse2d)
   if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
 
     set(CMAKE_CXX_FLAGS_RELEASE "-DNO_DISP_IO -g0 -O2 -fPIC \
--fomit-frame-pointer -Xpreprocessor -fopenmp -lomp -Wno-write-strings -DNDEBUG ${FFTW_FLAGS}")
-    set(CMAKE_CXX_FLAGS_DEBUG "-DNO_DISP_IO -g -fPIC -Xpreprocessor -fopenmp -lomp\
+-fomit-frame-pointer ${OpenMP_CXX_FLAGS} -Wno-write-strings -DNDEBUG \
+${FFTW_FLAGS}")
+    set(CMAKE_CXX_FLAGS_DEBUG "-DNO_DISP_IO -g -fPIC ${OpenMP_CXX_FLAGS} \
 -Wno-write-strings ${FFTW_CXX_FLAGS}")
 
   else()
 
     set(CMAKE_CXX_FLAGS_RELEASE "-DNO_DISP_IO -g0 -O2 -fPIC \
--fomit-frame-pointer -fopenmp -Wno-write-strings -DNDEBUG ${FFTW_FLAGS}"
+-fomit-frame-pointer ${OpenMP_CXX_FLAGS} -Wno-write-strings -DNDEBUG \
+${FFTW_FLAGS}"
     )
-    set(CMAKE_CXX_FLAGS_DEBUG "-DNO_DISP_IO -g -fPIC -fopenmp \
+    set(CMAKE_CXX_FLAGS_DEBUG "-DNO_DISP_IO -g -fPIC ${OpenMP_CXX_FLAGS} \
 -Wno-write-strings ${FFTW_CXX_FLAGS}"
     )
 
