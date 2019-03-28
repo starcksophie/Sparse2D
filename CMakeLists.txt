@@ -23,6 +23,15 @@ project(sparse2d)
   endif()
   message(STATUS "Installing to: ${CMAKE_INSTALL_PREFIX}")
 
+  # Find OpenMP
+  if(CMAKE_CXX_COMPILER_ID MATCHES "AppleClang")
+    set(OpenMP_CXX_FLAGS "-fopenmp")
+    set(OpenMP_CXX_LIB_NAMES "omp")
+    set(OpenMP_CXX_LIBRARIES "/usr/local/opt/libomp/lib/libomp.dylib")
+  else()
+    find_package(OpenMP REQUIRED)
+  endif()
+
   # Locate CFITSIO using pkg-config or use command line arguments to configure
   # CFITSIO
   if(CFITSIO_LIBRARIES STREQUAL "" OR NOT DEFINED CFITSIO_LIBRARIES OR
@@ -52,22 +61,25 @@ project(sparse2d)
   # Set compilation flags Mac OSX or any other system
   if(APPLE)
 
-    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
 
       set(CMAKE_CXX_FLAGS_RELEASE "-DMACOS -DNO_DISP_IO -w -g0 -O2 -fPIC \
--fomit-frame-pointer -ffast-math -Wno-write-strings -DNDEBUG ${FFTW_FLAGS} -Xpreprocessor -fopenmp -lomp -I/usr/local/include -L/usr/local/lib")
+-fomit-frame-pointer -ffast-math -Wno-write-strings -DNDEBUG ${FFTW_FLAGS} \
+-Xpreprocessor ${OpenMP_CXX_FLAGS} -I/usr/local/include -L/usr/local/lib")
 
       set(CMAKE_CXX_FLAGS_DEBUG "-DMACOS -DNO_DISP_IO -w -g0 -fPIC -ffast-math \
--Wno-write-strings ${FFTW_CXX_FLAGS} -Xpreprocessor -fopenmp -lomp -I/usr/local/include -L/usr/local/lib")
+-Wno-write-strings ${FFTW_CXX_FLAGS} -Xpreprocessor ${OpenMP_CXX_FLAGS} \
+-I/usr/local/include -L/usr/local/lib")
 
     else()
 
       set(CMAKE_CXX_FLAGS_RELEASE "-DMACOS -DNO_DISP_IO -w -g0 -O2 -fPIC \
--fomit-frame-pointer -ffast-math -fopenmp -Wno-write-strings -DNDEBUG ${FFTW_FLAGS}"
+-fomit-frame-pointer -ffast-math ${OpenMP_CXX_FLAGS} -Wno-write-strings \
+-DNDEBUG ${FFTW_FLAGS}"
       )
 
-      set(CMAKE_CXX_FLAGS_DEBUG "-DMACOS -DNO_DISP_IO -w -g0 -fPIC -ffast-math -fopenmp \
--Wno-write-strings ${FFTW_CXX_FLAGS}"
+      set(CMAKE_CXX_FLAGS_DEBUG "-DMACOS -DNO_DISP_IO -w -g0 -fPIC \
+-ffast-math ${OpenMP_CXX_FLAGS} -Wno-write-strings ${FFTW_CXX_FLAGS}"
       )
 
     endif()
@@ -77,10 +89,10 @@ project(sparse2d)
   else(APPLE)
 
     set(CMAKE_CXX_FLAGS_RELEASE "-DNO_DISP_IO -g0 -O2 -fPIC \
--fomit-frame-pointer -fopenmp -Wno-write-strings -DNDEBUG ${FFTW_FLAGS}"
+-fomit-frame-pointer ${OpenMP_CXX_FLAGS} -Wno-write-strings -DNDEBUG ${FFTW_FLAGS}"
     )
 
-    set(CMAKE_CXX_FLAGS_DEBUG "-DNO_DISP_IO -g -fPIC -fopenmp \
+    set(CMAKE_CXX_FLAGS_DEBUG "-DNO_DISP_IO -g -fPIC ${OpenMP_CXX_FLAGS} \
 -Wno-write-strings ${FFTW_CXX_FLAGS}"
     )
 
