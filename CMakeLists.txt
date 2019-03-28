@@ -23,6 +23,15 @@ project(sparse2d)
   endif()
   message(STATUS "Installing to: ${CMAKE_INSTALL_PREFIX}")
 
+  # Find OpenMP
+  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+    set(OpenMP_CXX_FLAGS "-fopenmp")
+    set(OpenMP_CXX_LIB_NAMES "omp")
+    set(OpenMP_CXX_LIBRARIES "/usr/local/opt/libomp/lib/libomp.dylib")
+  else()
+    find_package(OpenMP REQUIRED)
+  endif()
+
   # Locate CFITSIO using pkg-config or use command line arguments to configure
   # CFITSIO
   if(CFITSIO_LIBRARIES STREQUAL "" OR NOT DEFINED CFITSIO_LIBRARIES OR
@@ -181,15 +190,18 @@ project(sparse2d)
   # UNIT TESTS #
   # -----------#
 
-  # Add unit tests
-  enable_testing()
-  set(UNIT_TESTS mr_transform_test)
+  option(RUN_TESTS "Build and run unit tests" ON)
+  if(RUN_TESTS)
+    # Add unit tests
+    enable_testing()
+    set(UNIT_TESTS mr_transform_test)
 
-  foreach(program ${UNIT_TESTS})
-    add_executable(${program} ${PROJECT_SOURCE_DIR}/tests/${program}.cpp)
-    target_link_libraries(${program} mga2d sparse2d sparse1d tools)
-    if(SPARSE3D)
-      target_link_libraries(${program} mga2d sparse3d sparse2d sparse1d tools)
-    endif(SPARSE3D)
-    add_test(${program} ${program})
-  endforeach(program)
+    foreach(program ${UNIT_TESTS})
+      add_executable(${program} ${PROJECT_SOURCE_DIR}/tests/${program}.cpp)
+      target_link_libraries(${program} mga2d sparse2d sparse1d tools)
+      if(SPARSE3D)
+        target_link_libraries(${program} mga2d sparse3d sparse2d sparse1d tools)
+      endif(SPARSE3D)
+      add_test(${program} ${program})
+    endforeach(program)
+  endif(RUN_TESTS)
