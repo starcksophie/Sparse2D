@@ -199,15 +199,18 @@ project(sparse2d)
   # UNIT TESTS #
   # -----------#
 
-  # Add unit tests
-  enable_testing()
-  set(UNIT_TESTS mr_transform_test)
+  option(RUN_TESTS "Build and run unit tests" ON)
+  if(RUN_TESTS)
+    # Add unit tests
+    enable_testing()
+    set(UNIT_TESTS mr_transform_test)
 
-  foreach(program ${UNIT_TESTS})
-    add_executable(${program} ${PROJECT_SOURCE_DIR}/tests/${program}.cpp)
-    target_link_libraries(${program} mga2d sparse2d sparse1d tools)
-    if(SPARSE3D)
-      target_link_libraries(${program} mga2d sparse3d sparse2d sparse1d tools)
-    endif(SPARSE3D)
-    add_test(${program} ${program})
-  endforeach(program)
+    foreach(program ${UNIT_TESTS})
+      add_executable(${program} ${PROJECT_SOURCE_DIR}/tests/${program}.cpp)
+      target_link_libraries(${program} mga2d sparse2d sparse1d tools)
+      if(SPARSE3D)
+        target_link_libraries(${program} mga2d sparse3d sparse2d sparse1d tools)
+      endif(SPARSE3D)
+      add_test(${program} ${program})
+    endforeach(program)
+  endif(RUN_TESTS)
