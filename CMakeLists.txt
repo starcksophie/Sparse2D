@@ -50,43 +50,25 @@ project(sparse2d)
   include(BuildNFFT)
 
   # Set compilation flags Mac OSX or any other system
-  if(APPLE)
+  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
 
-    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+    set(CMAKE_CXX_FLAGS_RELEASE "-DNO_DISP_IO -g0 -O2 -fPIC \
+-fomit-frame-pointer -Xpreprocessor -fopenmp -lomp -Wno-write-strings -DNDEBUG ${FFTW_FLAGS}")
+    set(CMAKE_CXX_FLAGS_DEBUG "-DNO_DISP_IO -g -fPIC -Xpreprocessor -fopenmp -lomp\
+-Wno-write-strings ${FFTW_CXX_FLAGS}")
 
-      set(CMAKE_CXX_FLAGS_RELEASE "-DMACOS -DNO_DISP_IO -w -g0 -O2 -fPIC \
--fomit-frame-pointer -ffast-math -Wno-write-strings -DNDEBUG ${FFTW_FLAGS} -Xpreprocessor -fopenmp -lomp -I/usr/local/include -L/usr/local/lib")
-
-      set(CMAKE_CXX_FLAGS_DEBUG "-DMACOS -DNO_DISP_IO -w -g0 -fPIC -ffast-math \
--Wno-write-strings ${FFTW_CXX_FLAGS} -Xpreprocessor -fopenmp -lomp -I/usr/local/include -L/usr/local/lib")
-
-    else()
-
-      set(CMAKE_CXX_FLAGS_RELEASE "-DMACOS -DNO_DISP_IO -w -g0 -O2 -fPIC \
--fomit-frame-pointer -ffast-math -fopenmp -Wno-write-strings -DNDEBUG ${FFTW_FLAGS}"
-      )
-
-      set(CMAKE_CXX_FLAGS_DEBUG "-DMACOS -DNO_DISP_IO -w -g0 -fPIC -ffast-math -fopenmp \
--Wno-write-strings ${FFTW_CXX_FLAGS}"
-      )
-
-    endif()
-
-    message(STATUS "Using CXX Flags for Mac OSX: ${CMAKE_SYSTEM}")
-
-  else(APPLE)
+  else()
 
     set(CMAKE_CXX_FLAGS_RELEASE "-DNO_DISP_IO -g0 -O2 -fPIC \
 -fomit-frame-pointer -fopenmp -Wno-write-strings -DNDEBUG ${FFTW_FLAGS}"
     )
-
     set(CMAKE_CXX_FLAGS_DEBUG "-DNO_DISP_IO -g -fPIC -fopenmp \
 -Wno-write-strings ${FFTW_CXX_FLAGS}"
     )
 
     message(STATUS "Using CXX Flags for ${CMAKE_SYSTEM}")
 
-  endif(APPLE)
+  endif()
 
   # Build tools library
   FILE(GLOB src_lib1  "${PROJECT_SOURCE_DIR}/src/libtools/*.cc")

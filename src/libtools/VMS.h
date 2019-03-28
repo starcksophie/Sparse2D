@@ -40,9 +40,6 @@ void mem_free_buffer(char *Ptr);
 #include <unistd.h>
 #include <stdio.h>
 #include <string>
-#ifndef MACOS
-#include <malloc.h>
-#endif
 #include <signal.h>
 #include <cerrno>
 #include <fcntl.h>
