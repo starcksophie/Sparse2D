@@ -26,10 +26,12 @@ project(sparse2d)
   # Find OpenMP
   if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
     set(OpenMP_INCLUDE_PATH "/usr/local/include")
-    set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp -lomp\
-    -I${OpenMP_INCLUDE_PATH}")
+    set(OpenMP_LIB_PATH "/usr/local/lib")
+    set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp -lomp")
     set(OpenMP_CXX_LIB_NAMES "omp")
-    set(OpenMP_CXX_LIBRARIES "/usr/local/lib/libomp.dylib")
+    set(OpenMP_CXX_LIBRARIES "${OpenMP_LIB_PATH}/libomp.dylib")
+    include_directories(${OpenMP_INCLUDE_PATH})
+    link_directories(${OpenMP_LIB_PATH})
   else()
     find_package(OpenMP REQUIRED)
   endif()
@@ -93,7 +95,7 @@ ${FFTW_FLAGS}"
   endif(USE_FFTW)
 
   # Build sparse1d library
-  FILE(GLOB src_lib2  "${PROJECT_SOURCE_DIR}/src/libsparse1d/*.cc")
+  FILE(GLOB src_lib2 "${PROJECT_SOURCE_DIR}/src/libsparse1d/*.cc")
   include_directories("${PROJECT_SOURCE_DIR}/src/libsparse1d")
   add_library(sparse1d STATIC ${src_lib2})
   target_link_libraries(sparse1d ${CFITSIO_LIBRARIES} ${FFTW_LD_FLAGS})
@@ -102,7 +104,7 @@ ${FFTW_FLAGS}"
   endif(USE_FFTW)
 
   # Build sparse2d library
-  FILE(GLOB src_lib2  "${PROJECT_SOURCE_DIR}/src/libsparse2d/*.cc")
+  FILE(GLOB src_lib2 "${PROJECT_SOURCE_DIR}/src/libsparse2d/*.cc")
   include_directories("${PROJECT_SOURCE_DIR}/src/libsparse2d")
   add_library(sparse2d STATIC ${src_lib2})
   target_link_libraries(sparse2d ${CFITSIO_LIBRARIES} ${FFTW_LD_FLAGS})
@@ -113,7 +115,7 @@ ${FFTW_FLAGS}"
   option(SPARSE3D "Build Sparse3D library" ON)
   if(SPARSE3D)
     # Build sparse3d library
-    FILE(GLOB src_lib2  "${PROJECT_SOURCE_DIR}/src/libsparse3d/*.cc")
+    FILE(GLOB src_lib2 "${PROJECT_SOURCE_DIR}/src/libsparse3d/*.cc")
     include_directories("${PROJECT_SOURCE_DIR}/src/libsparse3d")
     add_library(sparse3d STATIC ${src_lib2})
     target_link_libraries(sparse3d ${CFITSIO_LIBRARIES} ${FFTW_LD_FLAGS})
@@ -124,7 +126,7 @@ ${FFTW_FLAGS}"
   message(STATUS "Sparse3D Build: ${SPARSE3D}")
 
   # Build mga2d library
-  FILE(GLOB src_mgalib2  "${PROJECT_SOURCE_DIR}/src/libmga2d/*.cc")
+  FILE(GLOB src_mgalib2 "${PROJECT_SOURCE_DIR}/src/libmga2d/*.cc")
   include_directories("${PROJECT_SOURCE_DIR}/src/libmga2d")
   add_library(mga2d STATIC ${src_mgalib2})
   target_link_libraries(mga2d ${CFITSIO_LIBRARIES} ${FFTW_LD_FLAGS})
@@ -134,7 +136,7 @@ ${FFTW_FLAGS}"
 
   option(BUILD_MSVST "Build MSVST library" OFF)
   if(BUILD_MSVST)
-    FILE(GLOB msvst_src_lib  "${PROJECT_SOURCE_DIR}/src/libmsvst/*.cc")
+    FILE(GLOB msvst_src_lib "${PROJECT_SOURCE_DIR}/src/libmsvst/*.cc")
     include_directories("${PROJECT_SOURCE_DIR}/src/libmsvst")
     add_library(msvst STATIC ${msvst_src_lib} )
   endif(BUILD_MSVST)
@@ -162,7 +164,7 @@ ${FFTW_FLAGS}"
       add_executable(${program} ${PROJECT_SOURCE_DIR}/src/${program}.cc)
       target_link_libraries(${program} msvst tools)
     endforeach(program)
-    FILE(GLOB inc_lib  "${PROJECT_SOURCE_DIR}/src/libmsvst/*.h")
+    FILE(GLOB inc_lib "${PROJECT_SOURCE_DIR}/src/libmsvst/*.h")
     INSTALL(FILES ${inc_lib} DESTINATION include/sparse2d)
     INSTALL(TARGETS ${MSVST} DESTINATION bin)
   endif(BUILD_MSVST)
