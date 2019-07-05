@@ -54,7 +54,7 @@ before_install:
 install:
   - mkdir build
   - cd build
-  - cmake ..
+  - cmake .. -DRUN_TESTS=OFF
 
 # build package and install
 script:
