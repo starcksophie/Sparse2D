@@ -12,13 +12,14 @@ addons:
       - cmake
       - pkgconfig
       - cfitsio
+    update: true
 
 matrix:
   include:
     - os: linux
     - os: osx
       name: "macOS with GCC"
-      osx_image: xcode10.1
+      osx_image: xcode10.2
       env:
         - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
       addons:
@@ -28,7 +29,7 @@ matrix:
             - *macos_packages
     - os: osx
       name: "macOS with vanilla Clang"
-      osx_image: xcode10.1
+      osx_image: xcode10.2
       env:
         - MATRIX_EVAL="CC=/usr/local/opt/llvm/bin/clang && CXX=/usr/local/opt/llvm/bin/clang++"
       addons:
@@ -39,7 +40,7 @@ matrix:
             - *macos_packages
     - os: osx
       name: "macOS with AppleClang"
-      osx_image: xcode10.1
+      osx_image: xcode10.2
       addons:
         homebrew:
           packages:
