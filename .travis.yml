@@ -28,17 +28,6 @@ matrix:
             - gcc@7
             - *macos_packages
     - os: osx
-      name: "macOS with vanilla Clang"
-      osx_image: xcode10.2
-      env:
-        - MATRIX_EVAL="CC=/usr/local/opt/llvm/bin/clang && CXX=/usr/local/opt/llvm/bin/clang++"
-      addons:
-        homebrew:
-          packages:
-            - llvm
-            - libomp
-            - *macos_packages
-    - os: osx
       name: "macOS with AppleClang"
       osx_image: xcode10.2
       addons:
