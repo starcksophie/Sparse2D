@@ -23,7 +23,6 @@ project(sparse2d)
   endif()
   message(STATUS "Installing to: ${CMAKE_INSTALL_PREFIX}")
 
-  # Find OpenMP
   if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
     set(OpenMP_INCLUDE_PATH "/usr/local/include")
     set(OpenMP_LIB_PATH "/usr/local/lib")
@@ -144,7 +143,9 @@ ${FFTW_FLAGS}"
 
   # Compile and link executables
   set(BINMR2D mr_transform mr_recons mr_filter mr_deconv mr_info cur_contrast
-      cur_deconv cur_filter cur_stat cur_trans)
+      cur_deconv cur_filter cur_stat cur_trans im1d_convert im1d_info im1d_stf
+      im1d_tfreq mr1d_detect mr1d_trans im1d_der_loggamma im1d_period im1d_tend
+      mr1d_filter)
   if(SPARSE3D)
     set(BINMR2D ${BINMR2D} mr3d_trans mr3d_filter mr3d_recons mr3d_stat
         mr2d1d_trans)
