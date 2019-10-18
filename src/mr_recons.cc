@@ -40,6 +40,7 @@ extern char *OptArg;
 
 extern int  GetOpt(int argc, char *const*argv, char *opts);
 Bool Verbose = False;
+Bool AdjRecons = False;
  
 /*********************************************************************/
 
@@ -67,7 +68,7 @@ static void recinit(int argc, char *argv[])
 #endif    
     
     /* get options */
-    while ((c = GetOpt(argc,argv,"vzZ:")) != -1) 
+    while ((c = GetOpt(argc,argv,"vazZ:")) != -1) 
     {
 	switch (c) 
         {
@@ -95,7 +96,8 @@ static void recinit(int argc, char *argv[])
 		OptZ = True;
                 break;
 #endif
-            case '?': usage(argv); break;
+        case 'a': AdjRecons = True; break;
+        case '?': usage(argv); break;
 	    default: usage(argv); break;
   		}
 	}
@@ -140,7 +142,16 @@ int  main(int argc, char *argv[])
     if (Verbose == True) MR_Data.print_info();
 
     Ifloat Dat (MR_Data.size_ima_nl(), MR_Data.size_ima_nc(), "Reconstruct.");
-    MR_Data.recons(Dat); 
+    if  (MR_Data.Type_Transform == TO_PAVE_BSPLINE)
+    {
+        Bool UseLastScale = True;
+        ATROUS_2D_WT AWT;
+        AWT.Bord = MR_Data.Border;
+        AWT.AdjointRec = AdjRecons;
+        AWT.recons(MR_Data.tabband(), Dat, MR_Data.nbr_band(), UseLastScale);
+    }
+    else MR_Data.recons(Dat);
+
     
     type_format FormatData = io_which_format(Name_Imag_Out);
     if ((FormatData == F_UNKNOWN) && (MR_Data.FormatInputImag != F_UNKNOWN))  
